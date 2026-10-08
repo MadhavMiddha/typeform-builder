@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.db import Base, engine
 from app.validators.answer_validators import AnswerValidationError
+from app.routers import forms as forms_router
+from app.routers import questions as questions_router
 
 logger = logging.getLogger(__name__)
 
@@ -115,3 +117,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 @app.get("/api/health", tags=["meta"])
 async def health() -> dict:
     return {"status": "ok", "version": "1.0.0"}
+
+
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+app.include_router(forms_router.router)
+app.include_router(questions_router.router)
+

@@ -2,7 +2,7 @@
 
 ## Phases Checklist
 - [x] Phase 1: Project Setup, Database Schema & Models
-- [ ] Phase 2: Backend Core API & Form/Question Management
+- [x] Phase 2: Backend Core API & Form/Question Management
 - [ ] Phase 3: Response Handling, Server Validation & Seed Data
 - [ ] Phase 4: Frontend Foundation, Design Tokens & API Client
 - [ ] Phase 5: Creator Dashboard & Form Lifecycle Management
@@ -33,3 +33,19 @@
 | 12 – api.ts, types.ts, QueryClientProvider, Toaster | frontend/src/lib/api.ts, types.ts, app/layout.tsx | ✅ Done |
 | 13 – Home page (/api/health wiring) + .env.example | frontend/src/app/page.tsx, .env.example | ✅ Done |
 | 14 – README.md, PROGRESS.md tick, DECISIONS.md rows | README.md, PROGRESS.md, DECISIONS.md | ✅ Done |
+
+## Phase 2 – Completion table
+
+| Item | File(s) | Status | Evidence |
+|------|---------|--------|----------|
+| 1 – form_service.py (CRUD, single aggregate, dup logic, publish bounds) | backend/app/services/form_service.py | ✅ Done | `pytest` passed |
+| 2 – question_service.py (CRUD, positional logic, options logic) | backend/app/services/question_service.py | ✅ Done | `pytest` passed |
+| 3 – get_current_user stub | backend/app/dependencies.py | ✅ Done | `pytest` passed |
+| 4 – forms.py and questions.py routers + exception handlers | backend/app/routers/*.py, exceptions.py, main.py | ✅ Done | `pytest` passed |
+| 5 – pytest tests (35+ test coverage on phase 2 APIs) | backend/tests/test_api.py | ✅ Done | 38 tests passing |
+| 6 – TanStack Query hooks (optimistic updates, toasts) | frontend/src/lib/api/forms.ts | ✅ Done | `tsc` passed |
+| 7 – Dashboard UI + grid/list view | frontend/src/app/page.tsx, components/dashboard/*.tsx | ✅ Done | `tsc` & `lint` & `build` passed |
+| 8 – Placeholder builder route + navigation | frontend/src/app/forms/[id]/edit/page.tsx | ✅ Done | `tsc` & `lint` passed |
+| 9 – Reusable accessible UI primitives | frontend/src/components/ui/*.tsx | ✅ Done | `tsc` & `lint` passed |
+| 10 – Toasts and interactions | frontend/src/components/dashboard/*.tsx | ✅ Done | `tsc` & `lint` passed |
+| 11 – Documentation & commands | PROGRESS.md, DECISIONS.md | ✅ Done | updated |
