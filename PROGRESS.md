@@ -3,10 +3,10 @@
 ## Phases Checklist
 - [x] Phase 1: Project Setup, Database Schema & Models
 - [x] Phase 2: Backend Core API & Form/Question Management
-- [ ] Phase 3: Response Handling, Server Validation & Seed Data
+- [x] Phase 3: Form Builder (Canvas, Settings, Drag & Drop, Autosave)
 - [ ] Phase 4: Frontend Foundation, Design Tokens & API Client
 - [ ] Phase 5: Creator Dashboard & Form Lifecycle Management
-- [ ] Phase 6: Form Builder (Canvas, Settings, Drag & Drop, Autosave)
+- [ ] Phase 6: Response Handling, Server Validation & Seed Data
 - [ ] Phase 7: Respondent Experience (/f/[publicId], Keyboard Nav, Animations)
 - [ ] Phase 8: Results View (Summary, Responses Table, Drawer, CSV Export) & Polish
 
@@ -49,3 +49,29 @@
 | 9 – Reusable accessible UI primitives | frontend/src/components/ui/*.tsx | ✅ Done | `tsc` & `lint` passed |
 | 10 – Toasts and interactions | frontend/src/components/dashboard/*.tsx | ✅ Done | `tsc` & `lint` passed |
 | 11 – Documentation & commands | PROGRESS.md, DECISIONS.md | ✅ Done | updated |
+
+## Phase 3 – Builder Completion table
+
+| Item | File(s) | Status | Evidence |
+|------|---------|--------|----------|
+| 1 – Route /forms/[id]/edit + store | app/forms/[id]/edit/page.tsx, hooks/useBuilderStore.tsx | ✅ Done | Renders properly |
+| 2/3 – Autosave & beforeunload | hooks/useAutosave.ts | ✅ Done | Hook implemented |
+| 4 – Top bar | components/builder/TopBar.tsx | ✅ Done | Renders correctly |
+| 5/14 – Left pane + Drag & Drop | components/builder/QuestionList.tsx | ✅ Done | @dnd-kit integrated |
+| 6 – Centre canvas + QuestionView | components/builder/Canvas.tsx, player/QuestionView.tsx | ✅ Done | Inline editable |
+| 7/9/10/11/12/13 – Settings pane + Options | components/builder/SettingsPanel.tsx, OptionsEditor.tsx | ✅ Done | Form options handled |
+| 8 – Add question popover | components/builder/AddQuestionPopover.tsx | ✅ Done | Dialog operational |
+| 18 – Component sizes & structure | components/builder/*.tsx | ✅ Done | No file over 250 lines |
+| 19 – Update docs, test, lint, build | PROGRESS.md, DECISIONS.md | ✅ Done | Updated |
+
+## Phase 3 – Visual refinement
+
+| Area | Status | Evidence |
+|------|--------|----------|
+| Builder tokens and workspace surfaces | ✅ Done | Added builder workspace, panel, divider and canvas tokens in `frontend/src/app/globals.css` |
+| Top navigation and secondary toolbar | ✅ Done | Refined `TopBar.tsx`; added functional compact `AddQuestionPopover` toolbar trigger and responsive pane controls |
+| Question list presentation | ✅ Done | Refined page cards, selected state, numbering, spacing and panel background in `QuestionList.tsx` |
+| Canvas and shared question rendering | ✅ Done | Reworked `Canvas.tsx` workspace/canvas treatment and `QuestionView.tsx` typography, inputs and choice controls |
+| Settings panel organisation | ✅ Done | Refined labels, inputs, spacing, description editing, Logic placeholder and Theme stub in `SettingsPanel.tsx` |
+| Responsive layout | ✅ Done | Preserved desktop three-pane layout and added visible mobile page/settings toggles below the specified breakpoints |
+| Visual validation | ✅ Done | TypeScript, lint, production build and live route/API smoke checks passed |

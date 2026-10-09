@@ -23,6 +23,10 @@
 
   --color-surface: #FFFFFF;
   --color-surface-muted: #F5F5F5;
+  --color-builder-workspace: #F7F7F8;
+  --color-builder-panel: #FBFBFC;
+  --color-builder-divider: #E6E6E8;
+  --color-builder-purple: #6C5CE7;
 
   --color-status-draft: #9B9B9B;
   --color-status-published: #0EC290;
@@ -39,6 +43,7 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.10);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.12);
+  --shadow-builder-canvas: 0 1px 2px rgba(20, 20, 24, 0.03);
 }
 
 /* ============================================================
@@ -65,6 +70,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-app);
   line-height: 1.6;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 /* Focus rings */

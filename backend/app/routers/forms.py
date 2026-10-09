@@ -311,6 +311,7 @@ class QuestionCreateBody(BaseModel):
     description: Optional[str] = None
     required: bool = False
     settings: Optional[Dict[str, Any]] = None
+    after_id: Optional[int] = None
 
 
 class ReorderBody(BaseModel):
@@ -335,6 +336,7 @@ def add_question(
             description=body.description,
             required=body.required,
             settings=body.settings,
+            after_id=body.after_id,
         )
     except Exception as exc:
         return _handle_service_errors(exc)

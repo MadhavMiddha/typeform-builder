@@ -112,9 +112,10 @@ def add_question(
     description: Optional[str] = None,
     required: bool = False,
     settings: Optional[Dict[str, Any]] = None,
+    after_id: Optional[int] = None,
 ) -> Question:
     """
-    Append a new question at the end of the form.
+    Add a new question to the form (appended at end or inserted after after_id).
 
     Sensible defaults:
     - multiple_choice / dropdown → creates two default options ("Option 1", "Option 2")
@@ -129,11 +130,35 @@ def add_question(
             {"type": f"Must be one of {list(VALID_QUESTION_TYPES)}."},
         )
 
-    # Compute next position
-    max_pos = db.scalar(
-        select(func.max(Question.position)).where(Question.form_id == form_id)
-    )
-    next_pos = (max_pos or 0) + 1
+    # Compute target position
+    if after_id is not None:
+        target_q = (
+            db.execute(
+                select(Question).where(Question.id == after_id, Question.form_id == form_id)
+            ).scalar_one_or_none()
+        )
+        if target_q is None:
+            max_pos = db.scalar(
+                select(func.max(Question.position)).where(Question.form_id == form_id)
+            )
+            target_pos = (max_pos or 0) + 1
+        else:
+            target_pos = target_q.position + 1
+            # Shift subsequent questions up by 1
+            subsequent = (
+                db.execute(
+                    select(Question)
+                    .where(Question.form_id == form_id, Question.position >= target_pos)
+                    .order_by(Question.position.desc())
+                ).scalars().all()
+            )
+            for sq in subsequent:
+                sq.position += 1
+    else:
+        max_pos = db.scalar(
+            select(func.max(Question.position)).where(Question.form_id == form_id)
+        )
+        target_pos = (max_pos or 0) + 1
 
     # Merge default settings with caller-provided settings
     merged_settings = _default_settings_for_type(question_type)
@@ -145,7 +170,7 @@ def add_question(
 
     q = Question(
         form_id=form_id,
-        position=next_pos,
+        position=target_pos,
         type=question_type,
         title=effective_title,
         description=description,
