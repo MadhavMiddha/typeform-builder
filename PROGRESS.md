@@ -160,3 +160,22 @@
 - Browser regression: 1 Playwright test passed after the dev server warmed up.
 - Production bundle inspection: largest JavaScript chunks were 224.5 KB, 155.7 KB, and 133.9 KB; the largest stylesheet was 48.0 KB.
 - The current application has no standalone Integrations, Team, or Settings-extras routes; the reusable placeholder is therefore wired at the available dashboard/builder surfaces rather than inventing unsupported routes.
+
+## Parity Pass – Part A Core Requirements Audit
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| 1. Builder: CRUD, reorder, all 8 types, required toggle, inline canvas description persistence | PASS | Verified in Canvas.tsx, QuestionList.tsx (@dnd-kit), and database questions schema. Inline description persists and displays in player under title. |
+| 2. Preview link & Play icon enabled with dark text & draft preview support | FIXED | Preview button updated to dark text (`text-[#262627]`), opens `/f/[publicId]?preview=1&formId=[id]` with top ribbon, bypassing persistence. |
+| 3. Forms: draft/published status, response count, duplicate, rename, delete with modal, publish/unpublish | PASS | GET `/api/forms` returns status and counts. FormList has confirmation dialogs and optimistic mutation hooks. |
+| 4. Respondent: 1 question at a time, fullscreen, slide transitions, keyboard shortcuts, client & server 422 validation, submit, thank-you, 404/unavailable screens | FIXED | Fixed double-period punctuation bug in required validation messages across client and server. Verified 422 JSON response with field messages. |
+| 5. Results: responses table, drawer detail, per-question summary stats, partial tracking & completion rate persistence | PASS | Verified `/api/forms/1/summary` and `/api/forms/1/responses` endpoints and Results page. |
+| 6. Placeholders show "Coming soon" where allowed (logic row, Workflow/Connect tabs, collaborate, payments/file upload, theme extras) | PASS | Tooltips and ComingSoon modal/dialog placeholders rendered across builder and header. |
+| 7. Notifications: toasts for errors/actions, delete modal, inline title editing | PASS | Sonner toasts and Radix alert dialogs implemented across forms and questions. |
+| 8. Seed data: 2+ published forms with mixed question types and responses | PASS | `scripts/seed.py` creates Customer Feedback Survey (all 8 types, 25 responses) & Event Registration (12 responses). |
+| 9. Repo: root frontend/ and backend/, .env & db files git-ignored | PASS | Verified root structure, gitignore entries, and tests. |
+
+### Phase 7 gaps
+- Final README documentation with architecture overview, schema, API endpoints, setup commands, and assumptions.
+- End-to-end integration automated test suite covering full respondent journey and export verification.
+

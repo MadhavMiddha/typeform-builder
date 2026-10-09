@@ -156,7 +156,7 @@ export function TopBar({ onRetry, activeTab = "content" }: { onRetry?: () => voi
           variant="ghost"
           size="sm"
           onClick={() => window.open(`/f/${form.public_id}?preview=1&formId=${form.id}`, "_blank", "noopener,noreferrer")}
-          className="h-8 px-3 text-xs"
+          className="h-8 px-3 text-xs font-semibold text-[#262627] hover:bg-neutral-100 cursor-pointer"
         >
           Preview
         </Button>

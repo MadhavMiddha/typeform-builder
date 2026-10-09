@@ -30,18 +30,23 @@ export function validateAnswer(
   const required = question.required;
 
   if (isEmpty(rawValue)) {
-    return required ? `Please fill in ${question.title}.` : null;
+    if (!required) return null;
+    if (["multiple_choice", "dropdown", "yes_no", "rating"].includes(question.type)) {
+      return "Please make a selection";
+    }
+    const title = (question.title || "Untitled question").trim().replace(/[.?!\s]+$/, "");
+    return `Please fill in ${title}`;
   }
 
   switch (question.type as QuestionType) {
     case "short_text": {
       const v = String(rawValue).trim();
-      if (v.length > 255) return "Answer must be 255 characters or fewer.";
+      if (v.length > 255) return "Maximum 255 characters";
       return null;
     }
     case "long_text": {
       const v = String(rawValue).trim();
-      if (v.length > 5000) return "Answer must be 5000 characters or fewer.";
+      if (v.length > 5000) return "Maximum 5000 characters";
       return null;
     }
     case "email": {
@@ -51,19 +56,22 @@ export function validateAnswer(
     }
     case "number": {
       const num = Number(rawValue);
-      if (Number.isNaN(num)) return "Please enter a valid number.";
+      if (Number.isNaN(num)) return "Hmm... that doesn't look like a number";
       const min = settings.number_min;
       const max = settings.number_max;
+      if (min !== undefined && max !== undefined && (num < Number(min) || num > Number(max))) {
+        return `Please enter a number between ${min} and ${max}`;
+      }
       if (min !== undefined && num < Number(min)) {
-        return `Number must be at least ${min}.`;
+        return `Please enter a number between ${min} and ${max ?? 999999}`;
       }
       if (max !== undefined && num > Number(max)) {
-        return `Number must be at most ${max}.`;
+        return `Please enter a number between ${min ?? 0} and ${max}`;
       }
       return null;
     }
     case "yes_no": {
-      if (typeof rawValue !== "boolean") return "Please answer Yes or No.";
+      if (typeof rawValue !== "boolean") return "Please make a selection";
       return null;
     }
     case "rating": {
@@ -71,7 +79,7 @@ export function validateAnswer(
       let max = Number(settings.rating_max ?? 5);
       if (max < 3 || max > 10) max = 5;
       if (!Number.isInteger(rating) || rating < 1 || rating > max) {
-        return `Rating must be between 1 and ${max}.`;
+        return "Please make a selection";
       }
       return null;
     }
@@ -99,9 +107,9 @@ function validateChoice(
 
   if (ids.some((id) => Number.isNaN(id))) return "Invalid option selection.";
   if (ids.some((id) => !validIds.has(id))) return "Unknown option for this question.";
-  if (dropdown && ids.length !== 1) return "Please select an option.";
+  if (dropdown && ids.length !== 1) return "Please make a selection";
   if (!allowMultiple && ids.length > 1) return "Only one option may be selected.";
-  if (ids.length < 1) return question.required ? "Please select an option." : null;
+  if (ids.length < 1) return question.required ? "Please make a selection" : null;
   return null;
 }
 

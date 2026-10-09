@@ -212,25 +212,30 @@ def submit_response(
     for question in form.questions:
         if not question.required or question.id not in visited_ids:
             continue
+        q_title = question.title.rstrip(". \t") if question.title else "Untitled question"
+        req_msg = f"Please fill in {q_title}"
         if question.id not in validated:
-            fields[str(question.id)] = f"Please fill in {question.title}."
+            if question.type in ("multiple_choice", "dropdown", "yes_no", "rating"):
+                fields[str(question.id)] = "Please make a selection"
+            else:
+                fields[str(question.id)] = req_msg
             continue
         norm = validated[question.id]
         if question.type in ("multiple_choice", "dropdown"):
             if not norm.option_ids:
-                fields[str(question.id)] = "Please select an option."
+                fields[str(question.id)] = "Please make a selection"
         elif question.type in ("short_text", "long_text", "email"):
             if not norm.value_text:
-                fields[str(question.id)] = f"Please fill in {question.title}."
+                fields[str(question.id)] = req_msg
         elif question.type == "number":
             if norm.value_number is None:
-                fields[str(question.id)] = f"Please fill in {question.title}."
+                fields[str(question.id)] = req_msg
         elif question.type == "yes_no":
             if norm.value_bool is None:
-                fields[str(question.id)] = f"Please fill in {question.title}."
+                fields[str(question.id)] = "Please make a selection"
         elif question.type == "rating":
             if norm.value_number is None:
-                fields[str(question.id)] = f"Please fill in {question.title}."
+                fields[str(question.id)] = "Please make a selection"
 
     if fields:
         # Validation happens before any response or answer is written, so the
