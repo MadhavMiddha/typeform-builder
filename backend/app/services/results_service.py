@@ -40,6 +40,10 @@ def _form(db: Session, form_id: int, user_id: int) -> Form:
 def list_responses(
     db: Session, form_id: int, user_id: int, page: int = 1, page_size: int = 25,
     status: str | None = None,
+    q: str | None = None,
+    from_date: datetime | None = None,
+    to_date: datetime | None = None,
+    sort: str | None = None,
 ) -> ResultsPage:
     _form(db, form_id, user_id)
     page = max(1, page)
@@ -47,6 +51,16 @@ def list_responses(
     filters = [Response.form_id == form_id]
     if status in ("partial", "completed"):
         filters.append(Response.status == status)
+    if from_date:
+        filters.append(Response.started_at >= from_date)
+    if to_date:
+        filters.append(Response.started_at <= to_date)
+    if q and q.strip():
+        q_term = f"%{q.strip()}%"
+        # Search responses matching answers value_text or question email
+        matching_rids = select(Answer.response_id).where(Answer.value_text.ilike(q_term))
+        filters.append((cast(Response.id, String).ilike(q_term)) | (Response.id.in_(matching_rids)))
+
     total = db.scalar(select(func.count(Response.id)).where(*filters)) or 0
     answer_count = func.count(Answer.id)
     preview = func.substr(func.coalesce(func.max(Answer.value_text), ""), 1, 120)
@@ -56,6 +70,11 @@ def list_responses(
         case((Answer.value_bool.is_(True), "Yes"), (Answer.value_bool.is_(False), "No"), else_=""),
     )
     previews = func.json_group_object(cast(Answer.question_id, String), func.substr(answer_value, 1, 120))
+
+    order_clause = func.coalesce(Response.submitted_at, Response.started_at).desc()
+    if sort == "asc":
+        order_clause = func.coalesce(Response.submitted_at, Response.started_at).asc()
+
     rows = db.execute(
         select(
             Response,
@@ -66,7 +85,7 @@ def list_responses(
         .outerjoin(Answer, Answer.response_id == Response.id)
         .where(*filters)
         .group_by(Response.id)
-        .order_by(func.coalesce(Response.submitted_at, Response.started_at).desc(), Response.id.desc())
+        .order_by(order_clause, Response.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     ).all()
@@ -134,9 +153,26 @@ def get_response(db: Session, form_id: int, response_id: int, user_id: int) -> R
     )
 
 
-def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
+def get_summary(
+    db: Session,
+    form_id: int,
+    user_id: int,
+    days: int = 14,
+    from_date: datetime | None = None,
+    to_date: datetime | None = None,
+    status: str | None = None,
+) -> ResultsSummary:
     _form(db, form_id, user_id)
     abandoned_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=30)
+    
+    resp_filters = [Response.form_id == form_id]
+    if status in ("completed", "partial"):
+        resp_filters.append(Response.status == status)
+    if from_date:
+        resp_filters.append(Response.started_at >= from_date)
+    if to_date:
+        resp_filters.append(Response.started_at <= to_date)
+
     total, completed, abandoned = db.execute(
         select(
             func.count(Response.id),
@@ -148,7 +184,7 @@ def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
                 )
             ),
         )
-        .where(Response.form_id == form_id)
+        .where(*resp_filters)
     ).one()
     total = int(total or 0)
     completed = int(completed or 0)
@@ -157,10 +193,13 @@ def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
         .options(selectinload(Question.options)).order_by(Question.position)
     ).all()
     result: list[QuestionSummary] = []
+
+    matching_response_ids = select(Response.id).where(*resp_filters)
+
     for question in questions:
         answered = db.scalar(
             select(func.count(Answer.id)).join(Response, Response.id == Answer.response_id)
-            .where(Answer.question_id == question.id, Response.form_id == form_id)
+            .where(Answer.question_id == question.id, Response.id.in_(matching_response_ids))
         ) or 0
         summary = QuestionSummary(
             question_id=question.id, title=question.title, type=question.type,
@@ -173,7 +212,7 @@ def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
                 .outerjoin(Answer, Answer.id == AnswerOption.answer_id)
                 .outerjoin(Response, Response.id == Answer.response_id)
                 .where(QuestionOption.question_id == question.id)
-                .where((Response.form_id == form_id) | (Response.id.is_(None)))
+                .where(Response.id.in_(matching_response_ids) | (Response.id.is_(None)))
                 .group_by(QuestionOption.id)
             ).all())
             summary.choices = [
@@ -184,57 +223,68 @@ def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
                 {**choice, "percentage": round(choice["count"] / int(answered) * 100, 2) if answered else 0}
                 for choice in summary.choices
             ]
-        elif question.type == "rating":
-            average, minimum, maximum = db.execute(
-                select(func.avg(Answer.value_number), func.min(Answer.value_number), func.max(Answer.value_number))
-                .join(Response, Response.id == Answer.response_id)
-                .where(Answer.question_id == question.id, Response.form_id == form_id)
-            ).one()
-            summary.average = round(float(average), 2) if average is not None else None
-            summary.minimum = float(minimum) if minimum is not None else None
-            summary.maximum = float(maximum) if maximum is not None else None
-            raw_distribution = dict(db.execute(
-                select(Answer.value_number, func.count(Answer.id)).join(Response, Response.id == Answer.response_id)
-                .where(Answer.question_id == question.id, Response.form_id == form_id)
-                .group_by(Answer.value_number).order_by(Answer.value_number)
-            ).all())
-            try:
-                rating_max = int(json.loads(question.settings or "{}").get("rating_max", 5))
-            except (TypeError, ValueError, json.JSONDecodeError):
-                rating_max = 5
-            summary.distribution = {
-                str(value): int(raw_distribution.get(value, 0))
-                for value in range(1, rating_max + 1)
-            }
+        elif question.type in ("rating", "number"):
+            num_values = [
+                float(val) for val, in db.execute(
+                    select(Answer.value_number).join(Response, Response.id == Answer.response_id)
+                    .where(Answer.question_id == question.id, Response.id.in_(matching_response_ids), Answer.value_number.is_not(None))
+                    .order_by(Answer.value_number)
+                ).all()
+            ]
+            if num_values:
+                n = len(num_values)
+                mean_val = sum(num_values) / n
+                summary.average = round(mean_val, 2)
+                summary.minimum = min(num_values)
+                summary.maximum = max(num_values)
+                # Median
+                if n % 2 == 1:
+                    summary.median = round(num_values[n // 2], 2)
+                else:
+                    summary.median = round((num_values[n // 2 - 1] + num_values[n // 2]) / 2.0, 2)
+                # Sample standard deviation (n - 1)
+                if n > 1:
+                    variance = sum((x - mean_val) ** 2 for x in num_values) / (n - 1)
+                    summary.std_dev = round(math.sqrt(variance), 2)
+                else:
+                    summary.std_dev = 0.0
+
+            if question.type == "rating":
+                raw_distribution = dict(db.execute(
+                    select(Answer.value_number, func.count(Answer.id)).join(Response, Response.id == Answer.response_id)
+                    .where(Answer.question_id == question.id, Response.id.in_(matching_response_ids), Answer.value_number.is_not(None))
+                    .group_by(Answer.value_number).order_by(Answer.value_number)
+                ).all())
+                try:
+                    rating_max = int(json.loads(question.settings or "{}").get("rating_max", 5))
+                except (TypeError, ValueError, json.JSONDecodeError):
+                    rating_max = 5
+                summary.distribution = {
+                    str(value): int(raw_distribution.get(value, 0))
+                    for value in range(1, rating_max + 1)
+                }
         elif question.type == "yes_no":
             summary.yes_count = int(db.scalar(
                 select(func.count(Answer.id)).join(Response, Response.id == Answer.response_id)
-                .where(Answer.question_id == question.id, Response.form_id == form_id, Answer.value_bool.is_(True))
+                .where(Answer.question_id == question.id, Response.id.in_(matching_response_ids), Answer.value_bool.is_(True))
             ) or 0)
             summary.no_count = int(db.scalar(
                 select(func.count(Answer.id)).join(Response, Response.id == Answer.response_id)
-                .where(Answer.question_id == question.id, Response.form_id == form_id, Answer.value_bool.is_(False))
+                .where(Answer.question_id == question.id, Response.id.in_(matching_response_ids), Answer.value_bool.is_(False))
             ) or 0)
-        elif question.type == "number":
-            minimum, average, maximum = db.execute(
-                select(func.min(Answer.value_number), func.avg(Answer.value_number), func.max(Answer.value_number))
-                .join(Response, Response.id == Answer.response_id)
-                .where(Answer.question_id == question.id, Response.form_id == form_id)
-            ).one()
-            summary.minimum = float(minimum) if minimum is not None else None
-            summary.average = round(float(average), 2) if average is not None else None
-            summary.maximum = float(maximum) if maximum is not None else None
         elif question.type in ("short_text", "long_text", "email"):
             summary.latest_answers = [
                 value for value, in db.execute(
                     select(Answer.value_text).join(Response, Response.id == Answer.response_id)
-                    .where(Answer.question_id == question.id, Response.form_id == form_id, Answer.value_text.is_not(None))
+                    .where(Answer.question_id == question.id, Response.id.in_(matching_response_ids), Answer.value_text.is_not(None))
                     .order_by(Response.submitted_at.desc(), Response.id.desc()).limit(5)
                 ).all()
             ]
         result.append(summary)
+
+    days_count = max(1, min(90, days))
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    start_day = (now - timedelta(days=13)).date()
+    start_day = (now - timedelta(days=days_count - 1)).date()
     daily_rows = db.execute(
         select(func.date(Response.submitted_at), func.count(Response.id))
         .where(Response.form_id == form_id, Response.status == "completed",
@@ -245,7 +295,7 @@ def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
     daily = {str(day): int(count) for day, count in daily_rows}
     responses_per_day = [
         {"date": str(start_day + timedelta(days=index)), "count": daily.get(str(start_day + timedelta(days=index)), 0)}
-        for index in range(14)
+        for index in range(days_count)
     ]
     average_time = db.scalar(
         select(func.avg(func.julianday(Response.submitted_at) - func.julianday(Response.started_at)) * 86400)

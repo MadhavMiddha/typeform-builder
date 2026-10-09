@@ -226,6 +226,8 @@ export interface QuestionSummary {
   total?: number;
   choices?: Array<{ label: string; count: number; option_id?: number }>;
   average?: number | null;
+  median?: number | null;
+  std_dev?: number | null;
   distribution?: Record<string, number>;
   minimum?: number | null;
   maximum?: number | null;

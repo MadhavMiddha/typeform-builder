@@ -200,5 +200,11 @@
 | 6. Desktop bottom-right fixed cluster: up/down chevron buttons 40px square #262627 + 'Powered by Typeform Builder' pill | PASS | Implemented in FormPlayer.tsx with ChevronUp/ChevronDown and pill. |
 | 7. Welcome screen: title 44px weight 400, description 22px grey max 840px, dark button, clock icon 'Takes N minutes' | PASS | Rendered in FormPlayer.tsx welcome screen. |
 | 8. Validation error pill: #fdecea background, #f5c2bd border, #a23b2a text, warning icon, 150ms fade-in, exact copy | PASS | Implemented with AlertTriangle and clean copy without double periods. |
-| 9. Mobile (<768px): Back + OK + footer layout preserved without desktop chevron cluster | PASS | Verified mobile bar in FormPlayer.tsx with md:hidden. |
+| 9. Mobile (<768px): Back + OK + footer layout preserved without desktop chevron cluster | PASS | Verified mobile bar in FormPlayer.tsx with md:hidden. |## Parity Pass – Part D Results Shell and Form Performance
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| 1. Remove big hero banner and Summary/Responses toggle, #f7f7f7 background under FormHeader | PASS | ResultsPage refactored with clean FormHeader, #f7f7f7 surface, and zero violet gradients. |
+| 2. Sub-tab bar in rounded 16px #f5f5f5 container ('Form performance', 'Response summary', 'Responses [N]'), 2px underline, ?tab= URL sync, default performance | PASS | Implemented in ResultsContent with query param sync and dynamic response counts. |
+| 3. Form performance: 5 stat cards (white, radius 16, neutral grey icons, big number), Responses over time chart in #a666bb with ticks, tooltip, and empty state | PASS | PerformanceView.tsx built with #a666bb bars, short dates, integer Y ticks, and hover tooltips. Backend GET /stats and /summary accept days, from, to, status. |
 | 10. Visual parity on choice, yes/no, rating (column alignment, letter badges, no boxed inputs) | PASS | Verified in QuestionView.tsx. |

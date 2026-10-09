@@ -1,6 +1,7 @@
 """Authenticated creator results endpoints."""
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, status
@@ -26,22 +27,42 @@ def _not_found(exc: NotFoundError) -> JSONResponse:
 
 @router.get("/responses", response_model=ResultsPage)
 def list_responses(
-    form_id: int, page: int = Query(1, ge=1), page_size: int = Query(25, ge=1, le=100),
+    form_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
     status_filter: Literal["completed", "partial"] | None = Query(None, alias="status"),
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+    q: str | None = Query(None),
+    from_date: datetime | None = Query(None, alias="from"),
+    to_date: datetime | None = Query(None, alias="to"),
+    sort: Literal["asc", "desc"] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> ResultsPage:
     try:
-        return results_service.list_responses(db, form_id, current_user.id, page, page_size, status_filter)
+        return results_service.list_responses(
+            db, form_id, current_user.id,
+            page=page, page_size=page_size, status=status_filter,
+            q=q, from_date=from_date, to_date=to_date, sort=sort,
+        )
     except NotFoundError as exc:
         return _not_found(exc)
 
 
 @router.get("/summary", response_model=ResultsSummary)
+@router.get("/stats", response_model=ResultsSummary)
 def get_summary(
-    form_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+    form_id: int,
+    days: int = Query(14, ge=1, le=90),
+    from_date: datetime | None = Query(None, alias="from"),
+    to_date: datetime | None = Query(None, alias="to"),
+    status: Literal["completed", "partial"] | None = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> ResultsSummary:
     try:
-        return results_service.get_summary(db, form_id, current_user.id)
+        return results_service.get_summary(
+            db, form_id, current_user.id, days=days, from_date=from_date, to_date=to_date, status=status
+        )
     except NotFoundError as exc:
         return _not_found(exc)
 

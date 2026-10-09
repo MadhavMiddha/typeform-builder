@@ -52,6 +52,8 @@ class QuestionSummary(BaseModel):
     answered_count: int = 0
     choices: list[dict[str, Any]] = Field(default_factory=list)
     average: Optional[float] = None
+    median: Optional[float] = None
+    std_dev: Optional[float] = None
     distribution: dict[str, int] = Field(default_factory=dict)
     minimum: Optional[float] = None
     maximum: Optional[float] = None

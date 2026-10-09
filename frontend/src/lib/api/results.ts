@@ -6,17 +6,64 @@ import type { FormSummary, ResponsePage, ResponseRead } from "@/lib/types";
 
 export const resultKeys = {
   all: ["results"] as const,
-  summary: (formId: number) => [...resultKeys.all, "summary", formId] as const,
-  responses: (formId: number, page: number, pageSize: number, status: "all" | "completed" | "partial") =>
-    [...resultKeys.all, "responses", formId, page, pageSize, status] as const,
+  summary: (
+    formId: number,
+    days?: number,
+    fromDate?: string,
+    toDate?: string,
+    status?: string
+  ) => [...resultKeys.all, "summary", formId, days, fromDate, toDate, status] as const,
+  responses: (
+    formId: number,
+    page: number,
+    pageSize: number,
+    status?: string,
+    q?: string,
+    fromDate?: string,
+    toDate?: string
+  ) =>
+    [
+      ...resultKeys.all,
+      "responses",
+      formId,
+      page,
+      pageSize,
+      status,
+      q,
+      fromDate,
+      toDate,
+    ] as const,
   response: (formId: number, responseId: number) =>
     [...resultKeys.all, "response", formId, responseId] as const,
 };
 
-export function useFormSummary(formId: number) {
+export function useFormSummary(
+  formId: number,
+  options?: {
+    days?: number;
+    from?: string;
+    to?: string;
+    status?: string;
+  }
+) {
+  const queryParams = new URLSearchParams();
+  if (options?.days) queryParams.set("days", String(options.days));
+  if (options?.from) queryParams.set("from", options.from);
+  if (options?.to) queryParams.set("to", options.to);
+  if (options?.status && options.status !== "all")
+    queryParams.set("status", options.status);
+  const qs = queryParams.toString();
+  const url = `${endpoints.forms.responses.summary(formId)}${qs ? `?${qs}` : ""}`;
+
   return useQuery<FormSummary>({
-    queryKey: resultKeys.summary(formId),
-    queryFn: () => api.get<FormSummary>(endpoints.forms.responses.summary(formId)),
+    queryKey: resultKeys.summary(
+      formId,
+      options?.days,
+      options?.from,
+      options?.to,
+      options?.status
+    ),
+    queryFn: () => api.get<FormSummary>(url),
     enabled: Number.isFinite(formId) && formId > 0,
     refetchInterval: 30_000,
   });
