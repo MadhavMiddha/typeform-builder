@@ -1,9 +1,13 @@
 "use client";
 
 import { useBuilderStore } from "@/hooks/useBuilderStore";
+import { useState } from "react";
 import { Switch } from "@/components/ui/Switch";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { QuestionType, QuestionRead } from "@/lib/types";
-import { OptionsEditor } from "./OptionsEditor";
+import { typeIcons } from "@/components/player/QuestionView";
+import { ChevronDown, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function SettingsPanel() {
   const { state, dispatch } = useBuilderStore();
@@ -16,7 +20,12 @@ export function SettingsPanel() {
   }
 
   if (state.selectedItem === "thank_you") {
-    return <ThankYouEditor />;
+    return (
+      <div className="bg-[#f5f5f5] rounded-[16px] p-4 flex flex-col gap-3">
+        <h3 className="text-[14px] font-semibold text-brand">Ending Screen</h3>
+        <p className="text-xs text-neutral-500">Edit title and message inline on the canvas.</p>
+      </div>
+    );
   }
 
   const question = form.questions.find((q) => q.id === state.selectedItem);
@@ -27,80 +36,53 @@ export function SettingsPanel() {
 
 function WelcomeEditor() {
   const { state, dispatch } = useBuilderStore();
-  const handleUpdate = (field: "welcome_title" | "welcome_description" | "welcome_button_label", value: string) => {
-    dispatch({ type: "UPDATE_FORM_FIELD", payload: { field, value } });
+  const currentButton = state.form?.welcome_button_label || "Start Survey";
+
+  const handleUpdateButton = (value: string) => {
+    if (value.length <= 24) {
+      dispatch({ type: "UPDATE_FORM_FIELD", payload: { field: "welcome_button_label", value } });
+    }
   };
 
   return (
-    <div className="w-[320px] max-lg:absolute max-lg:right-0 max-lg:z-20 max-lg:h-full bg-builder-panel border-l border-builder-divider flex flex-col p-5 gap-5 overflow-y-auto">
-      <h3 className="text-sm font-semibold text-brand">Welcome Screen</h3>
-      
-      <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Title</label>
-        <input 
-          type="text" 
-          value={state.form?.welcome_title || ""} 
-          onChange={(e) => handleUpdate("welcome_title", e.target.value)}
-          className="h-10 w-full border border-builder-divider rounded-lg px-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
-        />
-      </div>
+    <div className="bg-[#f5f5f5] rounded-[16px] p-5 flex flex-col gap-5">
+      <h3 className="text-[15px] font-semibold text-brand">Welcome Screen</h3>
 
       <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Description</label>
-        <textarea 
-          value={state.form?.welcome_description || ""} 
-          onChange={(e) => handleUpdate("welcome_description", e.target.value)}
-          className="w-full border border-builder-divider rounded-lg p-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 min-h-[100px]"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Button</label>
-        <input 
-          type="text" 
-          value={state.form?.welcome_button_label || ""} 
-          onChange={(e) => handleUpdate("welcome_button_label", e.target.value)}
-          className="h-10 w-full border border-builder-divider rounded-lg px-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-neutral-600">Button</label>
+          <span className="text-[11px] text-neutral-400">
+            {currentButton.length}/24
+          </span>
+        </div>
+        <input
+          type="text"
+          maxLength={24}
+          value={currentButton}
+          onChange={(e) => handleUpdateButton(e.target.value)}
+          className="h-9 w-full border border-neutral-200 rounded-lg px-3 text-xs bg-white text-brand focus:outline-none focus:border-[#262627]"
         />
       </div>
     </div>
   );
 }
 
-function ThankYouEditor() {
-  const { state, dispatch } = useBuilderStore();
-  const handleUpdate = (field: "thank_you_title" | "thank_you_message", value: string) => {
-    dispatch({ type: "UPDATE_FORM_FIELD", payload: { field, value } });
-  };
+const typeDefinitions: { type: QuestionType; label: string; badgeBg: string; badgeText: string }[] = [
+  { type: "short_text", label: "Short Text", badgeBg: "bg-[#e0f2fe]", badgeText: "text-[#0284c7]" },
+  { type: "long_text", label: "Long Text", badgeBg: "bg-[#e0f2fe]", badgeText: "text-[#0284c7]" },
+  { type: "email", label: "Email", badgeBg: "bg-[#fce7f3]", badgeText: "text-[#db2777]" },
+  { type: "number", label: "Number", badgeBg: "bg-[#fef9c3]", badgeText: "text-[#ca8a04]" },
+  { type: "multiple_choice", label: "Multiple Choice", badgeBg: "bg-[#ede9fe]", badgeText: "text-[#7c3aed]" },
+  { type: "dropdown", label: "Dropdown", badgeBg: "bg-[#ede9fe]", badgeText: "text-[#7c3aed]" },
+  { type: "yes_no", label: "Yes/No", badgeBg: "bg-[#ede9fe]", badgeText: "text-[#7c3aed]" },
+  { type: "rating", label: "Rating", badgeBg: "bg-[#dcfce7]", badgeText: "text-[#16a34a]" },
+];
 
-  return (
-    <div className="w-[320px] max-lg:absolute max-lg:right-0 max-lg:z-20 max-lg:h-full bg-builder-panel border-l border-builder-divider flex flex-col p-5 gap-5 overflow-y-auto">
-      <h3 className="text-sm font-semibold text-brand">Ending Screen</h3>
-      
-      <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Title</label>
-        <input 
-          type="text" 
-          value={state.form?.thank_you_title || ""} 
-          onChange={(e) => handleUpdate("thank_you_title", e.target.value)}
-          className="h-10 w-full border border-builder-divider rounded-lg px-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Message</label>
-        <textarea 
-          value={state.form?.thank_you_message || ""} 
-          onChange={(e) => handleUpdate("thank_you_message", e.target.value)}
-          className="w-full border border-builder-divider rounded-lg p-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20 min-h-[100px]"
-        />
-      </div>
-    </div>
-  );
-}
-
-function QuestionEditor({ question, formId }: { question: QuestionRead, formId: number }) {
+function QuestionEditor({ question, formId }: { question: QuestionRead; formId: number }) {
   const { dispatch } = useBuilderStore();
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
+  const [stepsDropdownOpen, setStepsDropdownOpen] = useState(false);
+
   const handleUpdate = (updates: Partial<QuestionRead>) => {
     dispatch({ type: "UPDATE_QUESTION", payload: { id: question.id, updates } });
   };
@@ -110,122 +92,303 @@ function QuestionEditor({ question, formId }: { question: QuestionRead, formId: 
     handleUpdate({ settings });
   };
 
+  const currentTypeInfo =
+    typeDefinitions.find((t) => t.type === question.type) || typeDefinitions[0];
+
+  const handleTypeSelect = (nextType: QuestionType) => {
+    setTypeDropdownOpen(false);
+    if (nextType === question.type) return;
+    const keepsOptions = nextType === "multiple_choice" || nextType === "dropdown";
+    if (
+      question.options.length &&
+      !keepsOptions &&
+      !window.confirm("Changing type will remove this question's options. Continue?")
+    ) {
+      return;
+    }
+    handleUpdate({ type: nextType, ...(keepsOptions ? {} : { options: [] }) });
+  };
+
+  // Toggles state for optional subfields
+  const hasMaxChars = question.settings?.max_characters != null;
+  const hasCustomPlaceholder = !!question.settings?.custom_placeholder;
+  const hasMinNumber = question.settings?.number_min != null;
+  const hasMaxNumber = question.settings?.number_max != null;
+
   return (
-    <div className="w-[320px] max-lg:absolute max-lg:right-0 max-lg:z-20 max-lg:h-full bg-builder-panel border-l border-builder-divider flex flex-col overflow-y-auto">
-      <div className="p-5 border-b border-builder-divider">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Type</span>
+    <div className="flex flex-col gap-4 overflow-y-auto pr-0.5 custom-thin-scrollbar">
+      {/* 1. Question Card */}
+      <div className="bg-[#f5f5f5] rounded-[16px] p-4 flex flex-col gap-3">
+        <h3 className="text-xs font-semibold text-neutral-600">Question</h3>
+        <div className="grid grid-cols-2 bg-neutral-200/60 p-1 rounded-lg text-xs font-medium">
+          <button className="py-1.5 rounded-md bg-white text-brand shadow-sm text-center">
+            Text
+          </button>
+          <Tooltip content="Coming soon">
+            <button
+              disabled
+              className="py-1.5 rounded-md text-neutral-400 cursor-not-allowed text-center"
+            >
+              Video
+            </button>
+          </Tooltip>
         </div>
-        <select
-          aria-label="Question type"
-          value={question.type}
-          onChange={(e) => {
-            const nextType = e.target.value as QuestionType;
-            const keepsOptions = nextType === "multiple_choice" || nextType === "dropdown";
-            if (question.options.length && !keepsOptions &&
-              !window.confirm("Changing type will remove this question's options. Continue?")) return;
-            handleUpdate({ type: nextType, ...(keepsOptions ? {} : { options: [] }) });
-          }}
-          className="w-full h-10 px-3 border border-builder-divider rounded-lg bg-white capitalize text-sm focus:outline-none focus:border-brand-accent"
-        >
-          {(["short_text", "long_text", "email", "number", "multiple_choice", "dropdown", "yes_no", "rating"] as QuestionType[]).map((type) => (
-            <option key={type} value={type}>{type.replace("_", " ")}</option>
-          ))}
-        </select>
       </div>
 
-      <div className="p-5 flex flex-col gap-5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-brand">Required</span>
-          <Switch 
-            checked={question.required} 
-            onCheckedChange={(c) => handleUpdate({ required: c })} 
-          />
+      {/* 2. Answer Card */}
+      <div className="bg-[#f5f5f5] rounded-[16px] p-4 flex flex-col gap-4">
+        <h3 className="text-xs font-semibold text-neutral-600">Answer</h3>
+
+        {/* Custom Type Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setTypeDropdownOpen(!typeDropdownOpen)}
+            className="w-full h-10 px-3 bg-white border border-neutral-200 rounded-lg flex items-center justify-between hover:border-neutral-300 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <span
+                className={cn(
+                  "w-5 h-5 rounded-[4px] flex items-center justify-center shrink-0",
+                  currentTypeInfo.badgeBg,
+                  currentTypeInfo.badgeText
+                )}
+              >
+                {typeIcons[question.type]}
+              </span>
+              <span className="text-xs font-medium text-brand">{currentTypeInfo.label}</span>
+            </div>
+            <ChevronDown size={14} className="text-neutral-400" />
+          </button>
+
+          {typeDropdownOpen && (
+            <div className="absolute left-0 right-0 top-11 z-50 bg-white border border-neutral-200 rounded-lg shadow-lg p-1 flex flex-col gap-0.5">
+              {typeDefinitions.map((item) => (
+                <button
+                  key={item.type}
+                  onClick={() => handleTypeSelect(item.type)}
+                  className={cn(
+                    "w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 text-xs text-left hover:bg-neutral-100 transition-colors",
+                    item.type === question.type ? "bg-neutral-50 font-semibold" : "font-normal"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "w-5 h-5 rounded-[4px] flex items-center justify-center shrink-0",
+                      item.badgeBg,
+                      item.badgeText
+                    )}
+                  >
+                    {typeIcons[item.type]}
+                  </span>
+                  <span className="text-brand">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Description</label>
-          <textarea
-            value={question.description || ""}
-            onChange={(e) => handleUpdate({ description: e.target.value })}
-            placeholder="Add an optional description"
-            className="min-h-20 w-full border border-builder-divider rounded-lg bg-white p-3 text-sm focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
-          />
-        </div>
+        <div className="h-px bg-neutral-200/80 my-1" />
 
-        {["short_text", "long_text", "email", "number"].includes(question.type) && (
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Placeholder text</label>
-            <input 
-              type="text" 
-              value={(question.settings?.placeholder as string) || ""} 
-              onChange={(e) => handleSettingsUpdate("placeholder", e.target.value)}
-              className="h-10 w-full border border-builder-divider rounded-lg px-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+        {/* Settings Rows with Toggles */}
+        <div className="flex flex-col gap-3.5">
+          {/* Required toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-brand">Required</span>
+            <Switch
+              checked={question.required}
+              onCheckedChange={(c) => handleUpdate({ required: c })}
             />
           </div>
-        )}
 
-        {question.type === "number" && (
-          <div className="flex gap-4">
-            <div className="flex flex-col gap-2 flex-1">
-              <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Min</label>
-              <input 
-                type="number" 
-                value={(question.settings?.number_min as number) || ""} 
-                onChange={(e) => handleSettingsUpdate("number_min", e.target.value ? Number(e.target.value) : null)}
-                className="h-10 w-full border border-builder-divider rounded-lg px-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
+          {/* Short Text & Long Text settings */}
+          {(question.type === "short_text" || question.type === "long_text") && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-brand">Max characters</span>
+                <Switch
+                  checked={hasMaxChars}
+                  onCheckedChange={(c) =>
+                    handleSettingsUpdate("max_characters", c ? 255 : null)
+                  }
+                />
+              </div>
+              {hasMaxChars && (
+                <input
+                  type="number"
+                  value={(question.settings?.max_characters as number) || ""}
+                  onChange={(e) =>
+                    handleSettingsUpdate(
+                      "max_characters",
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  className="h-8 border border-neutral-200 rounded-lg px-2 text-xs bg-white focus:outline-none focus:border-[#262627]"
+                  placeholder="e.g. 255"
+                />
+              )}
+            </>
+          )}
+
+          {/* Custom placeholder text toggle */}
+          {["short_text", "long_text", "email", "number"].includes(question.type) && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-brand">Custom placeholder text</span>
+                <Switch
+                  checked={hasCustomPlaceholder}
+                  onCheckedChange={(c) => {
+                    handleSettingsUpdate("custom_placeholder", c);
+                    if (!c) handleSettingsUpdate("placeholder", null);
+                  }}
+                />
+              </div>
+              {hasCustomPlaceholder && (
+                <input
+                  type="text"
+                  value={(question.settings?.placeholder as string) || ""}
+                  onChange={(e) => handleSettingsUpdate("placeholder", e.target.value)}
+                  placeholder="Type a custom placeholder..."
+                  className="h-8 border border-neutral-200 rounded-lg px-2 text-xs bg-white focus:outline-none focus:border-[#262627]"
+                />
+              )}
+            </>
+          )}
+
+          {/* Number specific settings */}
+          {question.type === "number" && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-brand">Min number</span>
+                <Switch
+                  checked={hasMinNumber}
+                  onCheckedChange={(c) => handleSettingsUpdate("number_min", c ? 0 : null)}
+                />
+              </div>
+              {hasMinNumber && (
+                <input
+                  type="number"
+                  value={question.settings?.number_min ?? ""}
+                  onChange={(e) =>
+                    handleSettingsUpdate(
+                      "number_min",
+                      e.target.value !== "" ? Number(e.target.value) : null
+                    )
+                  }
+                  className="h-8 border border-neutral-200 rounded-lg px-2 text-xs bg-white focus:outline-none focus:border-[#262627]"
+                  placeholder="Minimum value"
+                />
+              )}
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-brand">Max number</span>
+                <Switch
+                  checked={hasMaxNumber}
+                  onCheckedChange={(c) => handleSettingsUpdate("number_max", c ? 100 : null)}
+                />
+              </div>
+              {hasMaxNumber && (
+                <input
+                  type="number"
+                  value={question.settings?.number_max ?? ""}
+                  onChange={(e) =>
+                    handleSettingsUpdate(
+                      "number_max",
+                      e.target.value !== "" ? Number(e.target.value) : null
+                    )
+                  }
+                  className="h-8 border border-neutral-200 rounded-lg px-2 text-xs bg-white focus:outline-none focus:border-[#262627]"
+                  placeholder="Maximum value"
+                />
+              )}
+            </>
+          )}
+
+          {/* Multiple choice settings */}
+          {question.type === "multiple_choice" && (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-brand">Multiple selection</span>
+                <Switch
+                  checked={!!question.settings?.allow_multiple}
+                  onCheckedChange={(c) => handleSettingsUpdate("allow_multiple", c)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-brand">Randomize</span>
+                <Switch
+                  checked={!!question.settings?.randomize}
+                  onCheckedChange={(c) => handleSettingsUpdate("randomize", c)}
+                />
+              </div>
+            </>
+          )}
+
+          {/* Dropdown settings */}
+          {question.type === "dropdown" && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-brand">Randomize</span>
+              <Switch
+                checked={!!question.settings?.randomize}
+                onCheckedChange={(c) => handleSettingsUpdate("randomize", c)}
               />
             </div>
-            <div className="flex flex-col gap-2 flex-1">
-              <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Max</label>
-              <input 
-                type="number" 
-                value={(question.settings?.number_max as number) || ""} 
-                onChange={(e) => handleSettingsUpdate("number_max", e.target.value ? Number(e.target.value) : null)}
-                className="h-10 w-full border border-builder-divider rounded-lg px-3 text-sm bg-white focus:outline-none focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/20"
-              />
-            </div>
-          </div>
-        )}
+          )}
 
-        {question.type === "rating" && (
-          <div className="flex flex-col gap-2">
-            <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Steps</label>
-            <select 
-              value={(question.settings?.rating_max as number) || 5}
-              onChange={(e) => handleSettingsUpdate("rating_max", Number(e.target.value))}
-              className="h-10 w-full border border-builder-divider rounded-lg px-3 text-sm bg-white focus:outline-none focus:border-brand-accent"
+          {/* Rating Steps custom dropdown */}
+          {question.type === "rating" && (
+            <div className="flex items-center justify-between relative">
+              <span className="text-xs font-medium text-brand">Steps</span>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setStepsDropdownOpen(!stepsDropdownOpen)}
+                  className="h-8 px-3 border border-neutral-200 rounded-lg bg-white text-xs font-medium text-brand flex items-center gap-2 hover:border-neutral-300"
+                >
+                  <span>{(question.settings?.rating_max as number) || 5}</span>
+                  <ChevronDown size={13} className="text-neutral-400" />
+                </button>
+
+                {stepsDropdownOpen && (
+                  <div className="absolute right-0 top-9 z-50 bg-white border border-neutral-200 rounded-lg shadow-md p-1 grid grid-cols-2 gap-1 w-24">
+                    {[3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => {
+                          handleSettingsUpdate("rating_max", num);
+                          setStepsDropdownOpen(false);
+                        }}
+                        className={cn(
+                          "py-1 text-center text-xs rounded hover:bg-neutral-100",
+                          ((question.settings?.rating_max as number) || 5) === num
+                            ? "bg-neutral-100 font-bold"
+                            : ""
+                        )}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. Logic Card */}
+      <div className="bg-[#f5f5f5] rounded-[16px] p-4 flex items-center justify-between">
+        <span className="text-xs font-semibold text-neutral-600">Logic</span>
+        <Tooltip content="Coming soon">
+          <span>
+            <button
+              disabled
+              className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 cursor-not-allowed hover:bg-neutral-200/50"
             >
-              {[3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
-        )}
-
-        {(question.type === "multiple_choice" || question.type === "dropdown") && (
-          <div className="flex flex-col gap-2">
-             <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Options</label>
-             <OptionsEditor question={question} formId={formId} />
-             {question.type === "multiple_choice" && (
-                <div className="flex items-center justify-between mt-4">
-                  <span className="text-sm font-medium text-brand">Allow multiple selection</span>
-                  <Switch 
-                    checked={!!question.settings?.allow_multiple} 
-                    onCheckedChange={(c) => handleSettingsUpdate("allow_multiple", c)} 
-                  />
-                </div>
-             )}
-
-          </div>
-        )}
-
-        <details className="border-t border-builder-divider pt-4">
-          <summary className="cursor-pointer text-sm font-semibold text-brand">Logic <span className="ml-1 text-[10px] font-normal text-neutral-400">Coming soon</span></summary>
-          <p className="mt-2 rounded-lg bg-white p-3 text-xs leading-5 text-neutral-500">Conditional routing will be available in a future builder update.</p>
-        </details>
-        <details className="border-t border-builder-divider pt-4">
-          <summary className="cursor-pointer text-sm font-semibold text-brand">Theme</summary>
-          <p className="mt-2 rounded-lg bg-white p-3 text-xs leading-5 text-neutral-500">Theme settings apply to the respondent view.</p>
-        </details>
+              <Plus size={16} />
+            </button>
+          </span>
+        </Tooltip>
       </div>
     </div>
   );

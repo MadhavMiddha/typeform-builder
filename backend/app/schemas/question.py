@@ -39,6 +39,17 @@ class QuestionLogicRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class QuestionSettings(BaseModel):
+    rating_max: Optional[int] = None
+    allow_multiple: Optional[bool] = None
+    number_min: Optional[float] = None
+    number_max: Optional[float] = None
+    placeholder: Optional[str] = None
+    custom_placeholder: Optional[bool] = None
+    max_characters: Optional[int] = None
+    randomize: Optional[bool] = None
+
+
 class QuestionCreate(BaseModel):
     type: str
     title: str = ""

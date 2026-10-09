@@ -81,6 +81,26 @@ select {
 
 /* Focus rings */
 :focus-visible {
-  outline: 2px solid var(--color-brand-accent);
+  outline: 2px solid var(--color-brand);
   outline-offset: 2px;
+}
+
+/* Custom thin scrollbar for builder */
+.custom-thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #c9c9c9;
+  border-radius: 9999px;
+}
+.custom-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
+}
+.custom-thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #c9c9c9 transparent;
 }

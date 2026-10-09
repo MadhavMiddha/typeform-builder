@@ -79,6 +79,11 @@ def get_or_create_question(db, form_id: int, position: int, **kwargs) -> Questio
         q = Question(form_id=form_id, position=position, **kwargs)
         db.add(q)
         db.flush()
+    else:
+        # If existing question had empty or default title and kwargs provides a title, ensure it's populated
+        if "title" in kwargs and kwargs["title"] and not q.title:
+            q.title = kwargs["title"]
+            db.flush()
     return q
 
 

@@ -4,7 +4,7 @@ import { useForm } from "@/lib/api/forms";
 import { useParams, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Suspense, useEffect, useState } from "react";
-import { Eye, LayoutPanelLeft, PanelRight, Sparkles } from "lucide-react";
+import { LayoutPanelLeft, Palette, PanelRight, PanelRightClose, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BuilderProvider, useBuilderStore } from "@/hooks/useBuilderStore";
 import { TopBar } from "@/components/builder/TopBar";
@@ -21,6 +21,8 @@ function BuilderContent() {
   const { state, dispatch } = useBuilderStore();
   const router = useRouter();
   const [mobilePane, setMobilePane] = useState<"questions" | "settings" | null>(null);
+  const [leftPaneOpen, setLeftPaneOpen] = useState(true);
+  const [rightPaneOpen, setRightPaneOpen] = useState(true);
 
   // Initialize store when form loads
   useEffect(() => {
@@ -29,7 +31,7 @@ function BuilderContent() {
     }
   }, [form, state.form, dispatch]);
 
-  useAutosave(formId);
+  const { retry } = useAutosave(formId);
 
   if (!Number.isFinite(formId) || formId <= 0 || isLoading) {
     return (
@@ -77,47 +79,70 @@ function BuilderContent() {
   if (!state.form) return null;
 
   return (
-    <div className="h-screen bg-builder-workspace flex flex-col overflow-hidden text-sm text-brand">
-      <TopBar />
-      <div className="h-14 shrink-0 border-b border-builder-divider bg-builder-panel px-4 flex items-center gap-2">
-        <button
-          className="hidden max-[767px]:inline-flex h-9 items-center gap-2 rounded-lg border border-builder-divider bg-white px-3 text-xs font-semibold"
-          onClick={() => setMobilePane(mobilePane === "questions" ? null : "questions")}
-          aria-label="Toggle question list"
-        >
-          <LayoutPanelLeft size={15} /> Pages
-        </button>
-        <AddQuestionPopover formId={form.id} compact />
-        <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-transparent px-3 text-xs font-semibold text-neutral-600 hover:border-builder-divider hover:bg-white">
-          <Sparkles size={15} /> Design
-        </button>
-        <div className="ml-auto flex items-center gap-1 text-neutral-500">
-          <button className="rounded-lg p-2 hover:bg-white" aria-label="Preview canvas"><Eye size={16} /></button>
-          <button
-            className="hidden max-[1023px]:inline-flex rounded-lg p-2 hover:bg-white"
-            onClick={() => setMobilePane(mobilePane === "settings" ? null : "settings")}
-            aria-label="Toggle settings"
-          >
-            <PanelRight size={16} />
+    <div className="h-screen bg-white flex flex-col overflow-hidden text-sm text-brand">
+      <TopBar onRetry={retry} />
+      
+      {/* Secondary toolbar row */}
+      <div className="px-5 py-2.5 bg-white">
+        <div className="h-11 rounded-[12px] bg-[#f4f4f4] px-3 flex items-center gap-2">
+          <AddQuestionPopover formId={form.id} compact />
+          
+          <button className="inline-flex h-8 items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-200/70 transition-colors">
+            <Palette size={15} /> Design
           </button>
+          
+          <div className="h-4 w-px bg-neutral-300 mx-1" />
+          
+          <button 
+            className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-200/70 transition-colors"
+            aria-label="Play preview"
+          >
+            <Play size={15} fill="currentColor" />
+          </button>
+
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => {
+                setRightPaneOpen(!rightPaneOpen);
+              }}
+              className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-200/70 transition-colors"
+              aria-label="Collapse panel"
+              title={rightPaneOpen ? "Hide panel" : "Show panel"}
+            >
+              <PanelRightClose size={16} />
+            </button>
+          </div>
         </div>
       </div>
-      <div className="flex-1 flex overflow-hidden">
-        <div className={cn(
-          "max-[767px]:absolute max-[767px]:inset-y-0 max-[767px]:left-0 max-[767px]:z-30 max-[767px]:shadow-xl",
-          mobilePane === "questions" ? "max-[767px]:block" : "max-[767px]:hidden",
-          "min-[768px]:block"
-        )}>
-          <QuestionList />
+
+      {/* Main 3-column layout */}
+      <div className="flex-1 min-h-0 px-5 pb-5 flex gap-4 overflow-hidden bg-white">
+        {/* Left Column: Pages & Endings cards */}
+        {leftPaneOpen && (
+          <div className={cn(
+            "w-[280px] shrink-0 h-full min-h-0 flex flex-col gap-4 max-[767px]:absolute max-[767px]:inset-y-0 max-[767px]:left-0 max-[767px]:z-30 max-[767px]:shadow-xl",
+            mobilePane === "questions" ? "max-[767px]:flex" : "max-[767px]:hidden",
+            "min-[768px]:flex"
+          )}>
+            <QuestionList />
+          </div>
+        )}
+
+        {/* Center: Canvas Area */}
+        <div className="flex-1 min-w-0 h-full min-h-0">
+          <Canvas />
         </div>
-        <Canvas />
-        <div className={cn(
-          "max-[1023px]:absolute max-[1023px]:inset-y-0 max-[1023px]:right-0 max-[1023px]:z-30 max-[1023px]:shadow-xl",
-          mobilePane === "settings" ? "max-[1023px]:block" : "max-[1023px]:hidden",
-          "min-[1024px]:block"
-        )}>
-          <SettingsPanel />
-        </div>
+
+        {/* Right Column: Settings Cards */}
+        {rightPaneOpen && (
+          <div className={cn(
+            "w-[320px] shrink-0 h-full min-h-0 flex flex-col gap-4 max-[1023px]:absolute max-[1023px]:inset-y-0 max-[1023px]:right-0 max-[1023px]:z-30 max-[1023px]:shadow-xl",
+            mobilePane === "settings" ? "max-[1023px]:flex" : "max-[1023px]:hidden",
+            "min-[1024px]:flex"
+          )}>
+            <SettingsPanel />
+          </div>
+        )}
       </div>
     </div>
   );

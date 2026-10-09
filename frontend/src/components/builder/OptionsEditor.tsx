@@ -16,8 +16,19 @@ export function OptionsEditor({ question, formId }: { question: QuestionRead, fo
   const replaceOptions = useReplaceOptions(formId);
   const [options, setOptions] = useState(question.options || []);
   const [bulkValue, setBulkValue] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [focusIndex, setFocusIndex] = useState<number | null>(null);
 
-  useEffect(() => setOptions(question.options || []), [question.options]);
+  useEffect(() => {
+    setOptions(question.options || []);
+    setBulkValue((question.options || []).map((option) => option.label).join("\n"));
+  }, [question.options]);
+
+  useEffect(() => {
+    if (focusIndex === null) return;
+    document.querySelector<HTMLInputElement>(`[data-option-index="${focusIndex}"]`)?.focus();
+    setFocusIndex(null);
+  }, [focusIndex, options]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -62,6 +73,8 @@ export function OptionsEditor({ question, formId }: { question: QuestionRead, fo
     const tempId = -Math.floor(Math.random() * 100000);
     const newOptions = [...options, { id: tempId, question_id: question.id, label: "", position: options.length + 1 }];
     setOptions(newOptions);
+    setFocusIndex(newOptions.length - 1);
+    setValidationError("");
     
     dispatch({ 
       type: "UPDATE_QUESTION", 
@@ -73,6 +86,11 @@ export function OptionsEditor({ question, formId }: { question: QuestionRead, fo
   const handleBulkChange = (value: string) => {
     setBulkValue(value);
     const labels = value.split(/\r?\n/).map((label) => label.trim()).filter(Boolean).slice(0, 20);
+    if (labels.length < 2) {
+      setValidationError("Add at least two options.");
+      return;
+    }
+    setValidationError("");
     const newOptions = labels.map((label, index) => ({
       id: options[index]?.id ?? -index - 1,
       question_id: question.id,
@@ -132,6 +150,7 @@ export function OptionsEditor({ question, formId }: { question: QuestionRead, fo
         aria-label="Bulk edit options"
         className="mt-3 min-h-20 rounded-md border p-2 text-sm"
       />
+      {validationError && <p className="text-xs text-status-error">{validationError}</p>}
       {options.length >= 20 && <span className="text-xs text-neutral-400">Maximum 20 options reached.</span>}
     </div>
   );
@@ -168,6 +187,7 @@ function SortableOption({
       </div>
       <div className="flex-1 relative">
         <input 
+          data-option-index={index}
           type="text" 
           value={option.label}
           onChange={(e) => onUpdate(e.target.value)}

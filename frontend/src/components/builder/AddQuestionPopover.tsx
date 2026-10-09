@@ -68,18 +68,22 @@ export function AddQuestionPopover({ formId, compact = false }: { formId: number
     setOpen(false);
     
     // Find current selected position
-    let afterId = undefined;
+    let afterId: number | undefined;
+    let beforeId: number | undefined;
     if (typeof state.selectedItem === "number") {
       afterId = state.selectedItem;
+    } else if (state.selectedItem === "welcome" && state.form?.questions[0]) {
+      beforeId = state.form.questions[0].id;
     }
 
     createQuestion.mutate({
       type: type as QuestionType,
       title: "",
       after_id: afterId,
+      before_id: beforeId,
     }, {
       onSuccess: (newQ) => {
-        dispatch({ type: "ADD_QUESTION", payload: { question: newQ, afterId } });
+        dispatch({ type: "ADD_QUESTION", payload: { question: newQ, afterId, beforeId } });
         dispatch({ type: "SET_SELECTED_ITEM", payload: newQ.id });
       }
     });

@@ -12,6 +12,8 @@ export function useAutosave(formId: number) {
   const updateQuestion = useUpdateQuestion(formId);
   const previousRef = useRef<FormRead | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryRef = useRef<(() => void) | null>(null);
+  const saveVersionRef = useRef(0);
 
   useEffect(() => {
     if (!state.form || state.form.id !== formId) return;
@@ -43,11 +45,12 @@ export function useAutosave(formId: number) {
     });
     previousRef.current = current;
 
-    if (timerRef.current) clearTimeout(timerRef.current);
     if (!Object.keys(formUpdates).length && !changedQuestions.length) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
 
     dispatch({ type: "SET_SAVE_STATUS", payload: "saving" });
-    timerRef.current = setTimeout(async () => {
+    let saveVersion = ++saveVersionRef.current;
+    const save = async () => {
       try {
         if (Object.keys(formUpdates).length) await updateForm.mutateAsync(formUpdates);
         await Promise.all(changedQuestions.map((question) => {
@@ -60,16 +63,26 @@ export function useAutosave(formId: number) {
           };
           return updateQuestion.mutateAsync({ qid: question.id, updates });
         }));
-        dispatch({ type: "SET_SAVE_STATUS", payload: "saved" });
+        if (saveVersion === saveVersionRef.current) {
+          dispatch({ type: "SET_SAVE_STATUS", payload: "saved" });
+        }
       } catch {
-        dispatch({ type: "SET_SAVE_STATUS", payload: "error" });
+        if (saveVersion === saveVersionRef.current) {
+          dispatch({ type: "SET_SAVE_STATUS", payload: "error" });
+        }
       }
-    }, 600);
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
     };
+    retryRef.current = () => {
+      saveVersion = ++saveVersionRef.current;
+      dispatch({ type: "SET_SAVE_STATUS", payload: "saving" });
+      void save();
+    };
+    timerRef.current = setTimeout(() => void save(), 600);
   }, [dispatch, formId, state.form, updateForm, updateQuestion]);
+
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -82,4 +95,7 @@ export function useAutosave(formId: number) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [state.saveStatus]);
 
+  return {
+    retry: () => retryRef.current?.(),
+  };
 }

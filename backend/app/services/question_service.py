@@ -113,6 +113,7 @@ def add_question(
     required: bool = False,
     settings: Optional[Dict[str, Any]] = None,
     after_id: Optional[int] = None,
+    before_id: Optional[int] = None,
 ) -> Question:
     """
     Add a new question to the form (appended at end or inserted after after_id).
@@ -131,7 +132,25 @@ def add_question(
         )
 
     # Compute target position
-    if after_id is not None:
+    if before_id is not None:
+        target_q = (
+            db.execute(
+                select(Question).where(Question.id == before_id, Question.form_id == form_id)
+            ).scalar_one_or_none()
+        )
+        target_pos = target_q.position if target_q is not None else (
+            db.scalar(select(func.max(Question.position)).where(Question.form_id == form_id)) or 0
+        ) + 1
+        subsequent = (
+            db.execute(
+                select(Question)
+                .where(Question.form_id == form_id, Question.position >= target_pos)
+                .order_by(Question.position.desc())
+            ).scalars().all()
+        )
+        for sq in subsequent:
+            sq.position += 1
+    elif after_id is not None:
         target_q = (
             db.execute(
                 select(Question).where(Question.id == after_id, Question.form_id == form_id)

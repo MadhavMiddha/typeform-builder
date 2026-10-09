@@ -12,59 +12,25 @@
 # Error details
 
 ```
-Error: expect(locator).toBeVisible() failed
+Test timeout of 30000ms exceeded.
+```
 
-Locator:  locator('.w-5.flex.items-center.justify-center').last()
-Expected: visible
-Received: hidden
-Timeout:  5000ms
-
+```
+Error: page.reload: Test timeout of 30000ms exceeded.
 Call log:
-  - Expect "toBeVisible" locator('.w-5.flex.items-center.justify-center').last() with timeout 5000ms
-  - waiting for locator('.w-5.flex.items-center.justify-center').last()
-    13 × locator resolved to <div class="w-5 h-5 flex items-center justify-center text-[#0EC290] shrink-0 mt-0.5 sm:mt-0">…</div>
-       - unexpected value "hidden"
+  - waiting for navigation until "load"
+    - navigated to "http://localhost:3000/forms/22/edit"
 
 ```
 
+# Page snapshot
+
 ```yaml
-- banner:
-  - button "Back to dashboard"
-  - heading "My Test Form via Playwright" [level=1]
-  - text: Saving...
-  - navigation:
-    - button "Create"
-    - button "Share" [disabled]
-    - button "Results" [disabled]
-  - button "Preview" [disabled]
-  - button "Publish"
-- heading "Content" [level=2]
-- text: 👋 Welcome Screen Welcome to this form
-- button "Drag question"
-- text: 1 ...
-- button "Actions for question"
-- status
-- button "Add content"
-- text: 🏁 End Screen Thanks for completing this form! 1 →
-- heading [level=2]
-- paragraph: Description (optional)
-- textbox "Type your answer here..."
-- text: Type
-- combobox "Question type":
-  - option "short text" [selected]
-  - option "long text"
-  - option "email"
-  - option "number"
-  - option "multiple choice"
-  - option "dropdown"
-  - option "yes no"
-  - option "rating"
-- text: Required
-- switch
-- text: Placeholder text
-- textbox
-- region "Notifications alt+T"
-- alert: My workspace
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - banner [ref=f1e3]
+    - main [ref=f1e6]
+  - region "Notifications alt+T"
 ```
 
 # Test source
@@ -79,7 +45,7 @@ Call log:
   7  |     await page.click('button:has-text("Create form")');
   8  |     
   9  |     // Check if we navigated to the builder
-  10 |     await expect(page).toHaveURL(/\/forms\/\d+\/edit/);
+  10 |     await expect(page).toHaveURL(/\/forms\/\d+\/edit/, { timeout: 15000 });
   11 |     
   12 |     // 2. Edit title
   13 |     const titleInput = page.locator('header h1');
@@ -93,53 +59,51 @@ Call log:
   21 | 
   22 |     // 3. Add every question type
   23 |     const types = ['Short Text', 'Long Text', 'Email', 'Number', 'Multiple Choice', 'Dropdown', 'Yes/No', 'Rating'];
-  24 |     for (const type of types) {
-  25 |       await page.click('button:has-text("Add content")');
-  26 |       await page.click(`button:has-text("${type}")`);
-  27 |       // Wait for it to appear
-> 28 |       await expect(page.locator('.w-5.flex.items-center.justify-center').last()).toBeVisible();
-     |                                                                                  ^ Error: expect(locator).toBeVisible() failed
+  24 |     const questionItems = page.getByTestId('question-list-item');
+  25 |     for (const [index, type] of types.entries()) {
+  26 |       await page.getByRole('button', { name: 'Add content' }).first().click();
+  27 |       await page.getByRole('button', { name: type, exact: true }).click();
+  28 |       await expect(questionItems).toHaveCount(index + 1, { timeout: 10000 });
   29 |     }
   30 |     
   31 |     // Ensure all 8 questions were added (plus welcome/thank you)
   32 |     // Left pane items
-  33 |     const questionItems = page.locator('.w-5.flex.items-center.justify-center');
-  34 |     await expect(questionItems).toHaveCount(8);
-  35 | 
-  36 |     // 4. Reorder by drag
-  37 |     // Playwright drag and drop can be tricky with dnd-kit. We'll simulate drag and drop on the handles.
-  38 |     const firstHandle = page.locator('.cursor-grab').first();
-  39 |     const secondHandle = page.locator('.cursor-grab').nth(1);
-  40 |     
-  41 |     if (await firstHandle.isVisible() && await secondHandle.isVisible()) {
-  42 |         await firstHandle.dragTo(secondHandle);
-  43 |     }
-  44 |     
-  45 |     // 5. Delete with confirm
-  46 |     const lastItemMenu = page.locator('button:has(.lucide-more-vertical)').last();
-  47 |     // Hover over the item to reveal the menu button if necessary
-  48 |     await page.locator('.group').last().hover();
-  49 |     await lastItemMenu.click();
-  50 |     await page.click('text=Delete');
-  51 |     
-  52 |     // Confirm dialog
-  53 |     const confirmDelete = page.locator('button:has-text("Delete")').last();
-  54 |     await confirmDelete.click();
-  55 |     
-  56 |     // Verify count is 7
-  57 |     await expect(questionItems).toHaveCount(7);
-  58 | 
-  59 |     // 6. Persistence after reload
-  60 |     await page.reload();
-  61 |     await expect(page.locator('header h1')).toHaveText('My Test Form via Playwright');
-  62 |     await expect(questionItems).toHaveCount(7);
-  63 | 
-  64 |     // 7. Publish
-  65 |     await page.click('button:has-text("Publish")');
-  66 |     await page.click('text=Publish form');
-  67 |     
-  68 |     await expect(page.locator('button:has-text("Published")')).toBeVisible();
-  69 |   });
-  70 | });
-  71 | 
+  33 |     await expect(questionItems).toHaveCount(8);
+  34 | 
+  35 |     // 4. Reorder by drag
+  36 |     // Playwright drag and drop can be tricky with dnd-kit. We'll simulate drag and drop on the handles.
+  37 |     const firstHandle = page.locator('.cursor-grab').first();
+  38 |     const secondHandle = page.locator('.cursor-grab').nth(1);
+  39 |     
+  40 |     if (await firstHandle.isVisible() && await secondHandle.isVisible()) {
+  41 |         await firstHandle.dragTo(secondHandle);
+  42 |     }
+  43 |     
+  44 |     // 5. Delete with confirm
+  45 |     const lastItemMenu = questionItems.last().getByRole('button', { name: /Actions for/ });
+  46 |     await lastItemMenu.click();
+  47 |     await page.click('text=Delete');
+  48 |     
+  49 |     // Confirm dialog
+  50 |     const confirmDelete = page.locator('button:has-text("Delete")').last();
+  51 |     await confirmDelete.click();
+  52 |     
+  53 |     // Verify count is 7
+  54 |     await expect(questionItems).toHaveCount(7);
+  55 | 
+  56 |     // 6. Persistence after reload
+  57 |     await page.waitForTimeout(1200);
+> 58 |     await page.reload();
+     |                ^ Error: page.reload: Test timeout of 30000ms exceeded.
+  59 |     await expect(page.locator('header h1')).toHaveText('My Test Form via Playwright');
+  60 |     await expect(questionItems).toHaveCount(7);
+  61 | 
+  62 |     // 7. Publish
+  63 |     await page.click('button:has-text("Publish")');
+  64 |     await page.click('text=Publish form');
+  65 |     
+  66 |     await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 10000 });
+  67 |   });
+  68 | });
+  69 | 
 ```

@@ -75,3 +75,25 @@
 | Settings panel organisation | ✅ Done | Refined labels, inputs, spacing, description editing, Logic placeholder and Theme stub in `SettingsPanel.tsx` |
 | Responsive layout | ✅ Done | Preserved desktop three-pane layout and added visible mobile page/settings toggles below the specified breakpoints |
 | Visual validation | ✅ Done | TypeScript, lint, production build and live route/API smoke checks passed |
+
+### Phase 3 – Functional refinement follow-up
+
+| Area | Status | Evidence |
+|------|--------|----------|
+| Ordered insertion and numbering | ✅ Done | Welcome inserts before the first question, Thank-you appends, and local add/delete/reorder operations normalize contiguous positions |
+| Empty-question authoring | ✅ Done | New empty question titles receive focus and display an inline placeholder |
+| Type-specific validation | ✅ Done | Number ranges reject inverted bounds and choice bulk editing preserves the two-option minimum |
+| Duplicate/delete workflow | ✅ Done | Question duplication copies settings/options with a fresh id; deleting a selected question selects a nearby item |
+| Autosave recovery | ✅ Done | Debounced saves expose a Retry action while retaining unload protection |
+| Independent pane scrolling | ✅ Done | Builder flex containers use `min-h-0` and full-height pane wrappers |
+| Verification | ✅ Done | Frontend lint, typecheck, production build, backend compile check, and 92 backend tests passed |
+
+### Phase 3 – Second UI refinement and bug-fix pass
+
+| Area | Status | Evidence |
+|------|--------|----------|
+| Settings panel scrolling | ✅ Done | Settings panel now has a bounded full-height shell, fixed type header, and independently scrolling body; long option lists remain reachable |
+| Rating and Yes/No previews | ✅ Done | Shared `QuestionView` keeps consistent number/title/description alignment, configured rating star counts, and compact Y/N cards |
+| Options API synchronization | ✅ Done | Frontend adapter now sends the backend’s `{ options: string[] }` contract, removing 422 failures during bulk editing |
+| Responsive layout | ✅ Done | Browser checks at 1440px and 390px showed no horizontal overflow and exposed pane toggles at mobile width |
+| Browser verification | ⚠️ Partial | Live checks covered Rating step changes, Yes/No controls, 15-option scrolling/editing, Multiple Choice rendering, mobile overflow, and title persistence; the legacy end-to-end flow still times out during full-page reload |

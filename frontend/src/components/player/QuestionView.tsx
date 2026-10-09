@@ -2,7 +2,10 @@
 
 import { QuestionRead } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { AlignLeft, Hash, List, CheckSquare, Mail, ToggleLeft, Star, ChevronDown } from "lucide-react";
+import { AlignLeft, Hash, List, CheckSquare, Mail, ToggleLeft, Star, ChevronDown, Trash2, GripVertical } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/Dialog";
+import { Button } from "@/components/ui/Button";
 
 interface QuestionViewProps {
   question: QuestionRead;
@@ -24,136 +27,335 @@ export const typeIcons: Record<string, React.ReactNode> = {
 };
 
 export function QuestionView({ question, value, onChange, isBuilder, onUpdate }: QuestionViewProps) {
-  
-  const handleTitleChange = (e: React.FormEvent<HTMLHeadingElement>) => {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkError, setBulkError] = useState("");
+
+  useEffect(() => {
+    if (isBuilder && !question.title) {
+      titleRef.current?.focus();
+    }
+  }, [isBuilder, question.id, question.title]);
+
+  const handleTitleBlur = (e: React.FocusEvent<HTMLHeadingElement>) => {
     if (isBuilder && onUpdate) {
-      onUpdate({ title: e.currentTarget.textContent || "" });
+      // Remove any trailing asterisk before updating
+      let text = e.currentTarget.textContent || "";
+      if (question.required && text.endsWith("*")) {
+        text = text.slice(0, -1);
+      }
+      onUpdate({ title: text.trim() });
     }
   };
 
-  const handleDescriptionChange = (e: React.FormEvent<HTMLParagraphElement>) => {
-    if (isBuilder && onUpdate) {
-      onUpdate({ description: e.currentTarget.textContent || "" });
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLHeadingElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
     }
   };
+
+  const handleDescriptionBlur = (e: React.FocusEvent<HTMLParagraphElement>) => {
+    if (isBuilder && onUpdate) {
+      onUpdate({ description: (e.currentTarget.textContent || "").trim() });
+    }
+  };
+
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent<HTMLParagraphElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
+  };
+
+  // Option operations for Multiple Choice
+  const handleOptionLabelChange = (optId: number, label: string) => {
+    if (!onUpdate) return;
+    const newOptions = (question.options || []).map((o) =>
+      o.id === optId ? { ...o, label } : o
+    );
+    onUpdate({ options: newOptions });
+  };
+
+  const handleAddChoiceAfter = (index: number) => {
+    if (!onUpdate) return;
+    const current = question.options || [];
+    if (current.length >= 20) return;
+    const tempId = -Math.floor(Math.random() * 1000000);
+    const newOpt = {
+      id: tempId,
+      question_id: question.id,
+      label: `Option ${current.length + 1}`,
+      position: index + 2,
+    };
+    const updated = [...current];
+    updated.splice(index + 1, 0, newOpt);
+    const reindexed = updated.map((o, i) => ({ ...o, position: i + 1 }));
+    onUpdate({ options: reindexed });
+  };
+
+  const handleAddChoiceEnd = () => {
+    const current = question.options || [];
+    handleAddChoiceAfter(current.length - 1);
+  };
+
+  const handleDeleteChoice = (optId: number) => {
+    if (!onUpdate) return;
+    const current = question.options || [];
+    if (current.length <= 2) return;
+    const updated = current
+      .filter((o) => o.id !== optId)
+      .map((o, i) => ({ ...o, position: i + 1 }));
+    onUpdate({ options: updated });
+  };
+
+  const openBulkEdit = () => {
+    setBulkText((question.options || []).map((o) => o.label).join("\n"));
+    setBulkError("");
+    setBulkOpen(true);
+  };
+
+  const handleSaveBulk = () => {
+    const lines = bulkText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(0, 20);
+    if (lines.length < 2) {
+      setBulkError("Add at least 2 options.");
+      return;
+    }
+    const newOptions = lines.map((label, i) => ({
+      id: question.options[i]?.id ?? -i - 1000,
+      question_id: question.id,
+      label,
+      position: i + 1,
+    }));
+    onUpdate?.({ options: newOptions });
+    setBulkOpen(false);
+  };
+
+  const placeholderText =
+    (question.settings?.placeholder as string) ||
+    (question.type === "email" ? "name@example.com" : "Type your answer here...");
 
   return (
-    <div className="flex gap-5">
-      <div className="flex-shrink-0 text-brand font-semibold text-base mt-1">
-        {question.position} <span className="text-brand-accent px-1">→</span>
-      </div>
-      <div className="flex-1 flex flex-col gap-3">
-        <h2 
-          className={cn(
-            "text-[27px] leading-tight font-semibold tracking-[-0.025em] text-brand focus:outline-none",
-            isBuilder && "hover:bg-neutral-50 -mx-2 px-2 rounded-md cursor-text"
-          )}
-          contentEditable={isBuilder}
-          suppressContentEditableWarning
-          onBlur={handleTitleChange}
-          data-placeholder="Type your question here"
-        >
-          {question.title}
-        </h2>
-        
-        {(question.description || isBuilder) && (
-          <p 
-            className={cn(
-              "text-[16px] leading-7 text-neutral-500 focus:outline-none min-h-[1.5em] max-w-2xl",
-              isBuilder && "hover:bg-neutral-50 -mx-2 px-2 rounded-md cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
-            )}
+    <div className="w-full max-w-2xl mx-auto flex flex-col justify-center my-auto py-6">
+      {/* Title block with 20px black badge */}
+      <div className="flex items-start gap-3">
+        <div className="w-5 h-5 rounded-[5px] bg-[#262627] text-white flex items-center justify-center text-[12px] font-bold shrink-0 mt-1.5 select-none">
+          {question.position}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h2
+            ref={titleRef}
             contentEditable={isBuilder}
             suppressContentEditableWarning
-            onBlur={handleDescriptionChange}
-            data-placeholder="Description (optional)"
+            onBlur={handleTitleBlur}
+            onKeyDown={handleTitleKeyDown}
+            data-placeholder="Question title"
+            className={cn(
+              "text-[28px] leading-snug font-normal text-[#262627] focus:outline-none transition-colors",
+              isBuilder &&
+                "hover:bg-neutral-100/70 focus:bg-white rounded px-1.5 -mx-1.5 cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
+            )}
           >
-            {question.description}
-          </p>
-        )}
+            {question.title}
+            {question.required && <span className="text-[#262627] select-none">*</span>}
+          </h2>
 
-        <div className={cn("mt-8", isBuilder && "pointer-events-none")}>
-          {question.type === "short_text" && (
-            <input 
-              type="text" 
-              placeholder={(question.settings?.placeholder as string) || "Type your answer here..."}
-              className="w-full max-w-2xl border-b border-neutral-400 pb-3 text-lg bg-transparent focus:outline-none focus:border-brand-accent placeholder-neutral-400"
-              value={value || ""}
-              onChange={(e) => onChange?.(e.target.value)}
-            />
-          )}
-          {question.type === "long_text" && (
-            <textarea 
-              placeholder={(question.settings?.placeholder as string) || "Type your answer here..."}
-              className="w-full max-w-2xl border-b border-neutral-400 pb-3 text-lg bg-transparent focus:outline-none focus:border-brand-accent resize-none placeholder-neutral-400"
-              rows={3}
-              value={value || ""}
-              onChange={(e) => onChange?.(e.target.value)}
-            />
-          )}
-          {question.type === "email" && (
-            <input 
-              type="email" 
-              placeholder="name@example.com"
-              className="w-full max-w-2xl border-b border-neutral-400 pb-3 text-lg bg-transparent focus:outline-none focus:border-brand-accent placeholder-neutral-400"
-              value={value || ""}
-              onChange={(e) => onChange?.(e.target.value)}
-            />
-          )}
-          {question.type === "number" && (
-            <input 
-              type="number" 
-              placeholder={(question.settings?.placeholder as string) || "Type a number..."}
-              className="w-full max-w-2xl border-b border-neutral-400 pb-3 text-lg bg-transparent focus:outline-none focus:border-brand-accent placeholder-neutral-400"
-              value={value || ""}
-              onChange={(e) => onChange?.(e.target.value)}
-            />
-          )}
-          {question.type === "yes_no" && (
-            <div className="flex gap-4">
-              <button className="flex items-center gap-3 px-5 py-3 border border-builder-divider rounded-lg bg-white hover:bg-neutral-50 shadow-sm text-base font-semibold text-brand">
-                <span className="w-6 h-6 rounded bg-neutral-100 flex items-center justify-center text-sm text-neutral-500 font-bold border border-neutral-200">Y</span>
-                Yes
-              </button>
-              <button className="flex items-center gap-3 px-5 py-3 border border-builder-divider rounded-lg bg-white hover:bg-neutral-50 shadow-sm text-base font-semibold text-brand">
-                <span className="w-6 h-6 rounded bg-neutral-100 flex items-center justify-center text-sm text-neutral-500 font-bold border border-neutral-200">N</span>
-                No
-              </button>
-            </div>
-          )}
-          {question.type === "rating" && (
-            <div className="flex gap-2 text-4xl text-neutral-200">
-              {Array.from({ length: (question.settings?.rating_max as number) || 5 }).map((_, i) => (
-                <Star key={i} className="cursor-pointer hover:text-emerald-400 text-emerald-100" fill="currentColor" />
-              ))}
-            </div>
-          )}
-          {question.type === "multiple_choice" && (
-            <div className="flex flex-col gap-3">
-              {question.options.map((opt, i) => (
-                <button key={opt.id} className="flex items-center gap-4 px-4 py-3 border border-builder-divider rounded-lg bg-white hover:bg-neutral-50 shadow-sm text-base font-semibold text-brand text-left">
-                  <span className="w-6 h-6 rounded bg-neutral-100 flex items-center justify-center text-sm text-neutral-500 font-bold border border-neutral-200">
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-          {question.type === "dropdown" && (
-            <div className="relative">
-               <select className="w-full appearance-none bg-transparent border-b border-brand pb-2 text-xl focus:outline-none focus:border-brand-accent cursor-pointer text-brand" defaultValue="">
-                 <option value="" disabled>Type or select an option</option>
-                 {question.options.map((opt) => (
-                   <option key={opt.id} value={opt.id}>{opt.label}</option>
-                 ))}
-               </select>
-               <div className="absolute right-0 bottom-3 pointer-events-none">
-                 <ChevronDown size={20} className="text-neutral-500" />
-               </div>
-            </div>
+          {(question.description || isBuilder) && (
+            <p
+              contentEditable={isBuilder}
+              suppressContentEditableWarning
+              onBlur={handleDescriptionBlur}
+              onKeyDown={handleDescriptionKeyDown}
+              data-placeholder="Description (optional)"
+              className={cn(
+                "text-[18px] leading-relaxed italic text-neutral-400 mt-1 focus:outline-none transition-colors",
+                isBuilder &&
+                  "hover:bg-neutral-100/70 focus:bg-white rounded px-1.5 -mx-1.5 cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-neutral-400"
+              )}
+            >
+              {question.description}
+            </p>
           )}
         </div>
       </div>
+
+      {/* Answer Preview Controls */}
+      <div className="mt-8 pl-8">
+        {/* Short Text, Long Text, Email, Number */}
+        {(question.type === "short_text" ||
+          question.type === "long_text" ||
+          question.type === "email" ||
+          question.type === "number") && (
+          <div className="w-full border-b border-[#262627] pb-2">
+            <span className="text-[28px] font-light text-neutral-400 select-none block truncate">
+              {placeholderText}
+            </span>
+          </div>
+        )}
+
+        {/* Multiple Choice (inline editable) */}
+        {question.type === "multiple_choice" && (
+          <div className="flex flex-col gap-2.5">
+            {(question.options || []).map((opt, i) => (
+              <div
+                key={opt.id}
+                className="group flex items-center gap-2.5 bg-[#eeeeee] hover:bg-[#e6e6e6] rounded-[4px] px-3 py-2 min-w-[240px] max-w-md transition-colors"
+              >
+                {isBuilder && (
+                  <GripVertical
+                    size={14}
+                    className="text-neutral-400 opacity-0 group-hover:opacity-100 cursor-grab shrink-0 transition-opacity"
+                  />
+                )}
+                {/* White letter badge */}
+                <span className="w-[22px] h-[22px] rounded-[4px] bg-white border border-neutral-300 text-neutral-700 font-medium text-[11px] flex items-center justify-center shrink-0 select-none">
+                  {String.fromCharCode(65 + i)}
+                </span>
+
+                {isBuilder ? (
+                  <input
+                    type="text"
+                    value={opt.label}
+                    onChange={(e) => handleOptionLabelChange(opt.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddChoiceAfter(i);
+                      } else if (e.key === "Backspace" && opt.label === "" && (question.options?.length || 0) > 2) {
+                        e.preventDefault();
+                        handleDeleteChoice(opt.id);
+                      }
+                    }}
+                    placeholder={`Choice ${i + 1}`}
+                    className="flex-1 bg-transparent border-none text-[14px] text-[#262627] focus:outline-none"
+                  />
+                ) : (
+                  <span className="flex-1 text-[14px] text-[#262627]">{opt.label}</span>
+                )}
+
+                {isBuilder && (question.options?.length || 0) > 2 && (
+                  <button
+                    onClick={() => handleDeleteChoice(opt.id)}
+                    className="text-neutral-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+                    aria-label="Delete choice"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {isBuilder && (
+              <div className="flex items-center gap-4 mt-2">
+                <button
+                  onClick={handleAddChoiceEnd}
+                  disabled={(question.options?.length || 0) >= 20}
+                  className="text-xs font-medium text-neutral-700 underline underline-offset-2 hover:text-[#262627] transition-colors"
+                >
+                  Add choice
+                </button>
+                <button
+                  onClick={openBulkEdit}
+                  className="text-xs font-medium text-neutral-500 hover:text-[#262627] transition-colors"
+                >
+                  Bulk edit
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dropdown */}
+        {question.type === "dropdown" && (
+          <div className="relative max-w-md">
+            <select
+              className="w-full appearance-none bg-transparent border-b border-[#262627] pb-2 text-[20px] text-neutral-400 focus:outline-none cursor-pointer"
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Type or select an option
+              </option>
+              {question.options?.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-0 bottom-3 pointer-events-none text-neutral-500">
+              <ChevronDown size={20} />
+            </div>
+          </div>
+        )}
+
+        {/* Yes/No (stacked grey rows) */}
+        {question.type === "yes_no" && (
+          <div className="flex flex-col gap-2.5 max-w-[240px]">
+            <div className="flex items-center gap-2.5 bg-[#eeeeee] hover:bg-[#e6e6e6] rounded-[4px] px-3 py-2 transition-colors cursor-pointer">
+              <span className="w-[22px] h-[22px] rounded-[4px] bg-white border border-neutral-300 text-neutral-700 font-medium text-[11px] flex items-center justify-center shrink-0 select-none">
+                Y
+              </span>
+              <span className="text-[14px] text-[#262627] font-normal">Yes</span>
+            </div>
+            <div className="flex items-center gap-2.5 bg-[#eeeeee] hover:bg-[#e6e6e6] rounded-[4px] px-3 py-2 transition-colors cursor-pointer">
+              <span className="w-[22px] h-[22px] rounded-[4px] bg-white border border-neutral-300 text-neutral-700 font-medium text-[11px] flex items-center justify-center shrink-0 select-none">
+                N
+              </span>
+              <span className="text-[14px] text-[#262627] font-normal">No</span>
+            </div>
+          </div>
+        )}
+
+        {/* Rating: neutral grey outline stars */}
+        {question.type === "rating" && (
+          <div className="flex flex-wrap gap-2.5">
+            {Array.from({ length: (question.settings?.rating_max as number) || 5 }).map((_, i) => (
+              <Star
+                key={i}
+                size={36}
+                strokeWidth={1.5}
+                className="text-[#bfbfbf] hover:text-neutral-500 cursor-pointer transition-colors"
+                fill="none"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Bulk edit modal */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk edit choices</DialogTitle>
+            <DialogDescription>
+              Enter each option on a new line (2 to 20 options).
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            rows={8}
+            className="w-full border border-neutral-300 rounded-lg p-3 text-sm focus:outline-none focus:border-[#262627] font-normal"
+            placeholder="Option 1&#10;Option 2&#10;Option 3"
+          />
+          {bulkError && <p className="text-xs text-red-500 mt-1">{bulkError}</p>}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="ghost" size="sm">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button variant="primary" size="sm" onClick={handleSaveBulk}>
+              Save choices
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

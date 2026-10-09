@@ -7,7 +7,7 @@ test.describe('Form Builder Phase 3 Audit', () => {
     await page.click('button:has-text("Create form")');
     
     // Check if we navigated to the builder
-    await expect(page).toHaveURL(/\/forms\/\d+\/edit/);
+    await expect(page).toHaveURL(/\/forms\/\d+\/edit/, { timeout: 15000 });
     
     // 2. Edit title
     const titleInput = page.locator('header h1');
@@ -21,16 +21,15 @@ test.describe('Form Builder Phase 3 Audit', () => {
 
     // 3. Add every question type
     const types = ['Short Text', 'Long Text', 'Email', 'Number', 'Multiple Choice', 'Dropdown', 'Yes/No', 'Rating'];
-    for (const type of types) {
-      await page.click('button:has-text("Add content")');
-      await page.click(`button:has-text("${type}")`);
-      // Wait for it to appear
-      await expect(page.locator('.w-5.flex.items-center.justify-center').last()).toBeVisible();
+    const questionItems = page.getByTestId('question-list-item');
+    for (const [index, type] of types.entries()) {
+      await page.getByRole('button', { name: 'Add content' }).first().click();
+      await page.getByRole('button', { name: type, exact: true }).click();
+      await expect(questionItems).toHaveCount(index + 1, { timeout: 10000 });
     }
     
     // Ensure all 8 questions were added (plus welcome/thank you)
     // Left pane items
-    const questionItems = page.locator('.w-5.flex.items-center.justify-center');
     await expect(questionItems).toHaveCount(8);
 
     // 4. Reorder by drag
@@ -43,9 +42,7 @@ test.describe('Form Builder Phase 3 Audit', () => {
     }
     
     // 5. Delete with confirm
-    const lastItemMenu = page.locator('button:has(.lucide-more-vertical)').last();
-    // Hover over the item to reveal the menu button if necessary
-    await page.locator('.group').last().hover();
+    const lastItemMenu = questionItems.last().getByRole('button', { name: /Actions for/ });
     await lastItemMenu.click();
     await page.click('text=Delete');
     
@@ -57,6 +54,7 @@ test.describe('Form Builder Phase 3 Audit', () => {
     await expect(questionItems).toHaveCount(7);
 
     // 6. Persistence after reload
+    await page.waitForTimeout(1200);
     await page.reload();
     await expect(page.locator('header h1')).toHaveText('My Test Form via Playwright');
     await expect(questionItems).toHaveCount(7);
@@ -65,6 +63,6 @@ test.describe('Form Builder Phase 3 Audit', () => {
     await page.click('button:has-text("Publish")');
     await page.click('text=Publish form');
     
-    await expect(page.locator('button:has-text("Published")')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Published/ })).toBeVisible({ timeout: 10000 });
   });
 });

@@ -17,7 +17,7 @@ type BuilderAction =
   | { type: "SET_SELECTED_ITEM"; payload: SelectedItem }
   | { type: "SET_SAVE_STATUS"; payload: SaveStatus }
   | { type: "UPDATE_FORM_FIELD"; payload: { field: keyof FormRead; value: FormRead[keyof FormRead] } }
-  | { type: "ADD_QUESTION"; payload: { question: QuestionRead; afterId?: number } }
+  | { type: "ADD_QUESTION"; payload: { question: QuestionRead; afterId?: number; beforeId?: number } }
   | { type: "UPDATE_QUESTION"; payload: { id: number; updates: Partial<QuestionRead> } }
   | { type: "DELETE_QUESTION"; payload: number }
   | { type: "REORDER_QUESTIONS"; payload: QuestionRead[] };
@@ -29,6 +29,9 @@ const initialState: BuilderState = {
 };
 
 function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
+  const withPositions = (questions: QuestionRead[]) =>
+    questions.map((question, index) => ({ ...question, position: index + 1 }));
+
   switch (action.type) {
     case "SET_FORM":
       return { ...state, form: action.payload };
@@ -45,7 +48,10 @@ function builderReducer(state: BuilderState, action: BuilderAction): BuilderStat
     case "ADD_QUESTION":
       if (!state.form) return state;
       const newQuestions = [...state.form.questions];
-      if (action.payload.afterId) {
+      if (action.payload.beforeId) {
+        const index = newQuestions.findIndex((q) => q.id === action.payload.beforeId);
+        newQuestions.splice(index < 0 ? 0 : index, 0, action.payload.question);
+      } else if (action.payload.afterId) {
         const index = newQuestions.findIndex((q) => q.id === action.payload.afterId);
         if (index !== -1) {
           newQuestions.splice(index + 1, 0, action.payload.question);
@@ -55,7 +61,7 @@ function builderReducer(state: BuilderState, action: BuilderAction): BuilderStat
       } else {
         newQuestions.push(action.payload.question);
       }
-      return { ...state, form: { ...state.form, questions: newQuestions } };
+      return { ...state, form: { ...state.form, questions: withPositions(newQuestions) } };
     case "UPDATE_QUESTION":
       if (!state.form) return state;
       return {
@@ -73,12 +79,12 @@ function builderReducer(state: BuilderState, action: BuilderAction): BuilderStat
         ...state,
         form: {
           ...state.form,
-          questions: state.form.questions.filter((q) => q.id !== action.payload),
+          questions: withPositions(state.form.questions.filter((q) => q.id !== action.payload)),
         },
       };
     case "REORDER_QUESTIONS":
       if (!state.form) return state;
-      return { ...state, form: { ...state.form, questions: action.payload } };
+      return { ...state, form: { ...state.form, questions: withPositions(action.payload) } };
     default:
       return state;
   }
