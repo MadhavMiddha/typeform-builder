@@ -39,6 +39,30 @@ export interface FormListItem {
   created_at: string;
 }
 
+/** Public respondent payload (no creator fields). */
+export interface PublicQuestionRead {
+  id: number;
+  position: number;
+  type: QuestionType;
+  title: string;
+  description: string | null;
+  required: boolean;
+  settings: QuestionSettings | null;
+  options: QuestionOptionRead[];
+}
+
+export interface PublicFormPayload {
+  public_id: string;
+  title: string;
+  welcome_title: string | null;
+  welcome_description: string | null;
+  welcome_button_label: string | null;
+  thank_you_title: string | null;
+  thank_you_message: string | null;
+  theme: FormTheme | null;
+  questions: PublicQuestionRead[];
+}
+
 export interface FormRead {
   id: number;
   public_id: string;
@@ -181,7 +205,7 @@ export interface ResponseListItem {
 }
 
 export interface ResponseStartRead {
-  id: number;
+  id: string;
   form_id: number;
   status: ResponseStatus;
   started_at: string;
@@ -193,6 +217,7 @@ export interface AnswerCreate {
 }
 
 export interface ResponseSubmit {
+  response_id?: string | null;
   answers: AnswerCreate[];
 }
 

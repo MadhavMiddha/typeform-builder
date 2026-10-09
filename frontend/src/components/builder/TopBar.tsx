@@ -10,6 +10,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/DropdownMenu";
+import { toast } from "sonner";
 
 export function TopBar({ onRetry }: { onRetry?: () => void }) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function TopBar({ onRetry }: { onRetry?: () => void }) {
   
   const [title, setTitle] = useState(form?.title || "");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,11 +62,22 @@ export function TopBar({ onRetry }: { onRetry?: () => void }) {
     { id: "content", label: "Content", disabled: false },
     { id: "workflow", label: "Workflow", disabled: true },
     { id: "connect", label: "Connect", disabled: true },
-    { id: "share", label: "Share", disabled: true },
+    { id: "share", label: "Share", disabled: false },
     { id: "results", label: "Results", disabled: true },
   ];
 
+  const publicUrl = form.public_id
+    ? `/f/${form.public_id}`
+    : "";
+
+  const copyLink = async () => {
+    if (!publicUrl || form.status !== "published") return;
+    await navigator.clipboard.writeText(`${window.location.origin}${publicUrl}`);
+    toast.success("Public link copied");
+  };
+
   return (
+    <>
     <header className="h-14 bg-white border-b border-[#e6e6e8] flex items-center justify-between px-4 sticky top-0 z-40">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <Link
@@ -112,6 +125,7 @@ export function TopBar({ onRetry }: { onRetry?: () => void }) {
           ) : (
             <button
               key={tab.id}
+              onClick={() => tab.id === "share" && setShowShare((visible) => !visible)}
               className="h-14 px-4 text-xs font-semibold text-brand border-b-2 border-brand flex items-center"
             >
               {tab.label}
@@ -134,13 +148,14 @@ export function TopBar({ onRetry }: { onRetry?: () => void }) {
           )}
         </div>
 
-        <Tooltip content="Coming soon">
-          <span className="inline-block cursor-not-allowed">
-            <Button variant="ghost" size="sm" disabled className="pointer-events-none text-neutral-400 h-8 px-3 text-xs">
-              Preview
-            </Button>
-          </span>
-        </Tooltip>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => window.open(`/f/${form.public_id}?preview=1&formId=${form.id}`, "_blank", "noopener,noreferrer")}
+          className="h-8 px-3 text-xs"
+        >
+          Preview
+        </Button>
 
         {/* Copy public link button */}
         <Tooltip content={form.status === "published" ? "Copy link" : "Publish form to share link"}>
@@ -200,5 +215,28 @@ export function TopBar({ onRetry }: { onRetry?: () => void }) {
         </DropdownMenu>
       </div>
     </header>
+    {showShare && (
+      <section className="border-b border-[#e6e6e8] bg-white px-5 py-4 shadow-sm" aria-label="Share form">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-brand">Share your form</h2>
+            {form.status === "published" ? (
+              <p className="mt-1 text-xs text-neutral-500">Anyone with this link can respond.</p>
+            ) : (
+              <p className="mt-1 text-xs text-neutral-500">Publish this form to enable its public link.</p>
+            )}
+          </div>
+          {form.status === "published" && publicUrl ? (
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={copyLink} className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white">Copy link</button>
+              <a href={publicUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-neutral-200 px-3 py-2 text-xs font-semibold text-brand">Open form</a>
+            </div>
+          ) : (
+            <span className="rounded-lg bg-neutral-100 px-3 py-2 text-xs font-medium text-neutral-500">Unpublished</span>
+          )}
+        </div>
+      </section>
+    )}
+    </>
   );
 }

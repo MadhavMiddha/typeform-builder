@@ -94,6 +94,7 @@ function BuilderContent() {
           <div className="h-4 w-px bg-neutral-300 mx-1" />
           
           <button 
+            onClick={() => window.open(`/f/${form.public_id}?preview=1&formId=${form.id}`, "_blank", "noopener,noreferrer")}
             className="p-1.5 rounded-lg text-neutral-600 hover:bg-neutral-200/70 transition-colors"
             aria-label="Play preview"
           >

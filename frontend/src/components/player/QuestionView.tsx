@@ -1,18 +1,20 @@
 "use client";
 
-import { QuestionRead } from "@/lib/types";
+import { QuestionRead, PublicQuestionRead } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AlignLeft, Hash, List, CheckSquare, Mail, ToggleLeft, Star, ChevronDown, Trash2, GripVertical } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
+import type { AnswerValue } from "@/lib/validation";
 
 interface QuestionViewProps {
-  question: QuestionRead;
-  value?: string | number | string[];
-  onChange?: (value: string | number | string[]) => void;
+  question: QuestionRead | PublicQuestionRead;
+  value?: AnswerValue;
+  onChange?: (value: AnswerValue) => void;
   isBuilder?: boolean;
   onUpdate?: (updates: Partial<QuestionRead>) => void;
+  error?: string;
 }
 
 export const typeIcons: Record<string, React.ReactNode> = {
@@ -26,7 +28,7 @@ export const typeIcons: Record<string, React.ReactNode> = {
   rating: <Star size={18} className="text-emerald-500" />,
 };
 
-export function QuestionView({ question, value, onChange, isBuilder, onUpdate }: QuestionViewProps) {
+export function QuestionView({ question, value, onChange, isBuilder, onUpdate, error }: QuestionViewProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkText, setBulkText] = useState("");
@@ -139,6 +141,78 @@ export function QuestionView({ question, value, onChange, isBuilder, onUpdate }:
   const placeholderText =
     (question.settings?.placeholder as string) ||
     (question.type === "email" ? "name@example.com" : "Type your answer here...");
+
+  if (!isBuilder) {
+    const selected = (id: number) =>
+      Array.isArray(value) ? value.includes(id) : value === id;
+    const setValue = (next: AnswerValue) => onChange?.(next);
+    return (
+      <div className="w-full max-w-2xl mx-auto py-6" aria-live="polite">
+        <div className="flex items-start gap-3">
+          <div className="w-5 h-5 rounded-[5px] bg-brand text-white flex items-center justify-center text-xs font-bold shrink-0 mt-1.5">
+            {question.position}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 id={`question-${question.id}`} className="text-3xl leading-snug font-normal text-brand">
+              {question.title}{question.required && <span aria-hidden="true">*</span>}
+            </h2>
+            {question.description && <p className="text-lg italic text-neutral-400 mt-1">{question.description}</p>}
+          </div>
+        </div>
+        <div className="mt-8 pl-8 space-y-3">
+          {(question.type === "short_text" || question.type === "email" || question.type === "number") && (
+            <input
+              autoFocus
+              type={question.type === "email" ? "email" : question.type === "number" ? "number" : "text"}
+              value={value == null ? "" : String(value)}
+              onChange={(e) => setValue(question.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value)}
+              placeholder={placeholderText}
+              className="w-full border-b border-brand bg-transparent pb-2 text-2xl focus:outline-none"
+              aria-labelledby={`question-${question.id}`}
+              aria-invalid={Boolean(error)}
+            />
+          )}
+          {question.type === "long_text" && (
+            <textarea autoFocus value={typeof value === "string" ? value : ""} onChange={(e) => setValue(e.target.value)}
+              placeholder={placeholderText} rows={4} className="w-full resize-none border-b border-brand bg-transparent pb-2 text-2xl focus:outline-none" aria-labelledby={`question-${question.id}`} />
+          )}
+          {(question.type === "multiple_choice" || question.type === "dropdown") && question.type === "dropdown" && (
+            <select autoFocus value={typeof value === "number" ? value : ""} onChange={(e) => setValue(e.target.value ? Number(e.target.value) : "")}
+              className="w-full border-b border-brand bg-transparent pb-2 text-xl focus:outline-none" aria-labelledby={`question-${question.id}`}>
+              <option value="">Select an option</option>
+              {question.options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+          )}
+          {question.type === "multiple_choice" && question.options.map((option, i) => (
+            <button autoFocus={i === 0} type="button" key={option.id} onClick={() => {
+              const allowMultiple = question.settings?.allow_multiple !== false;
+              const current = Array.isArray(value) ? value : value == null ? [] : [Number(value)];
+              setValue(allowMultiple ? (current.includes(option.id) ? current.filter((id) => id !== option.id) : [...current, option.id]) : option.id);
+            }} aria-pressed={selected(option.id)}
+              className={cn("w-full max-w-md flex items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors", selected(option.id) ? "bg-brand text-white" : "bg-neutral-200 hover:bg-neutral-300")}>
+              <span className={cn("w-6 h-6 rounded bg-white border text-neutral-700 text-xs flex items-center justify-center", selected(option.id) && "border-white")}>{String.fromCharCode(65 + i)}</span>
+              {option.label}
+            </button>
+          ))}
+          {question.type === "yes_no" && [true, false].map((answer, i) => (
+            <button autoFocus={i === 0} type="button" key={String(answer)} onClick={() => setValue(answer)} aria-pressed={value === answer}
+              className={cn("w-full max-w-xs block rounded-md px-3 py-2.5 text-left", value === answer ? "bg-brand text-white" : "bg-neutral-200 hover:bg-neutral-300")}>
+              {answer ? "Yes" : "No"}
+            </button>
+          ))}
+          {question.type === "rating" && (
+            <div className="flex gap-2" role="radiogroup" aria-label="Rating">
+              {Array.from({ length: Math.min(10, Math.max(3, Number(question.settings?.rating_max ?? 5))) }, (_, i) => i + 1).map((rating) => (
+                <button autoFocus={rating === 1} type="button" key={rating} onClick={() => setValue(rating)} aria-label={`${rating} out of ${question.settings?.rating_max ?? 5}`} aria-pressed={value === rating}
+                  className={cn("w-10 h-10 rounded border", value === rating ? "bg-brand text-white" : "hover:bg-neutral-200")}>{rating}</button>
+              ))}
+            </div>
+          )}
+          {error && <p role="alert" className="text-sm text-status-error">{error}</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto flex flex-col justify-center my-auto py-6">

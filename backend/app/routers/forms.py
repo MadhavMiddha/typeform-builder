@@ -18,7 +18,8 @@ from app.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.form import FormCreate, FormListItem, FormRead, FormUpdate
 from app.schemas.question import QuestionCreate, QuestionRead
-from app.services import form_service, question_service
+from app.schemas.public import PublicFormRead, PublicQuestionRead
+from app.services import form_service, question_service, response_service
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
 
 router = APIRouter(prefix="/api/forms", tags=["forms"])
@@ -37,7 +38,7 @@ def _err(status_code: int, code: str, message: str, fields: dict | None = None) 
 
 def _handle_service_errors(exc: Exception) -> JSONResponse:
     if isinstance(exc, NotFoundError):
-        return _err(status.HTTP_404_NOT_FOUND, "NOT_FOUND", exc.message)
+        return _err(status.HTTP_404_NOT_FOUND, exc.code, exc.message)
     if isinstance(exc, ConflictError):
         return _err(status.HTTP_409_CONFLICT, exc.code, exc.message)
     if isinstance(exc, ValidationError):
@@ -204,6 +205,66 @@ def get_form(
     except Exception as exc:
         return _handle_service_errors(exc)
     return JSONResponse(content=_form_to_dict(form))
+
+
+def _question_settings_dict(q: Any) -> dict | None:
+    if not q.settings:
+        return None
+    if isinstance(q.settings, dict):
+        return q.settings
+    try:
+        parsed = json.loads(q.settings)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
+
+
+def _form_to_public_read(form: Any) -> PublicFormRead:
+    theme = None
+    if form.theme:
+        try:
+            theme = json.loads(form.theme)
+        except Exception:
+            theme = None
+    questions = []
+    for q in sorted(form.questions, key=lambda x: x.position):
+        questions.append(
+            PublicQuestionRead(
+                id=q.id,
+                position=q.position,
+                type=q.type,
+                title=q.title,
+                description=q.description,
+                required=q.required,
+                settings=_question_settings_dict(q),
+                options=sorted(q.options, key=lambda o: o.position),
+            )
+        )
+    return PublicFormRead(
+        public_id=form.public_id,
+        title=form.title,
+        welcome_title=form.welcome_title,
+        welcome_description=form.welcome_description,
+        welcome_button_label=form.welcome_button_label,
+        thank_you_title=form.thank_you_title,
+        thank_you_message=form.thank_you_message,
+        theme=theme,
+        questions=questions,
+    )
+
+
+@router.get("/{form_id}/preview", response_model=PublicFormRead)
+def preview_form(
+    form_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Creator-only preview payload (works for draft or published forms)."""
+    try:
+        form = response_service.get_form_preview(db, form_id, current_user.id)
+    except Exception as exc:
+        return _handle_service_errors(exc)
+    return _form_to_public_read(form)
 
 
 @router.patch("/{form_id}", response_class=JSONResponse)

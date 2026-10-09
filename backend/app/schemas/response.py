@@ -30,7 +30,7 @@ class AnswerRead(BaseModel):
 
 
 class ResponseStartRead(BaseModel):
-    id: int
+    id: str
     form_id: int
     status: str
     started_at: datetime
@@ -39,6 +39,7 @@ class ResponseStartRead(BaseModel):
 
 
 class ResponseSubmit(BaseModel):
+    response_id: Optional[str] = None
     answers: List[AnswerCreate]
 
 

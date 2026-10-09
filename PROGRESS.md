@@ -4,7 +4,7 @@
 - [x] Phase 1: Project Setup, Database Schema & Models
 - [x] Phase 2: Backend Core API & Form/Question Management
 - [x] Phase 3: Form Builder (Canvas, Settings, Drag & Drop, Autosave)
-- [ ] Phase 4: Frontend Foundation, Design Tokens & API Client
+- [x] Phase 4: Public Respondent Flow + Submission API
 - [ ] Phase 5: Creator Dashboard & Form Lifecycle Management
 - [ ] Phase 6: Response Handling, Server Validation & Seed Data
 - [ ] Phase 7: Respondent Experience (/f/[publicId], Keyboard Nav, Animations)
@@ -97,3 +97,16 @@
 | Options API synchronization | ✅ Done | Frontend adapter now sends the backend’s `{ options: string[] }` contract, removing 422 failures during bulk editing |
 | Responsive layout | ✅ Done | Browser checks at 1440px and 390px showed no horizontal overflow and exposed pane toggles at mobile width |
 | Browser verification | ⚠️ Partial | Live checks covered Rating step changes, Yes/No controls, 15-option scrolling/editing, Multiple Choice rendering, mobile overflow, and title persistence; the legacy end-to-end flow still times out during full-page reload |
+
+## Phase 4 – Public respondent flow and submission API
+
+| Item | File(s) | Status | Evidence |
+|------|---------|--------|----------|
+| 1 – Public form read, response start, validated atomic submit | backend/app/services/response_service.py, backend/app/routers/public.py | ✅ Done | Published-only reads, partial responses, typed answers/options, completed timestamps, and 409 duplicate-submit handling |
+| 2 – Shared field error envelope | backend/app/routers/public.py, backend/app/services/exceptions.py | ✅ Done | Validation responses use `error.code`, `message`, and question-id keyed `fields` |
+| 3 – Body/answer limits and IP limiter | backend/app/routers/public.py, backend/app/middleware/rate_limit.py | ✅ Done | 512 KiB body limit, 200-answer limit, documented per-process limiter |
+| 4 – Public API test coverage | backend/tests/test_public_api.py, backend/tests/test_validators.py | ✅ Done | `124 passed` |
+| 5 – Reducer state machine | frontend/src/components/player/formPlayerReducer.ts, frontend/tests/formPlayerReducer.test.ts | ✅ Done | Vitest covers next/previous, validation blocking, error clearing, and jump extension point |
+| 6–15 – Respondent player UX | frontend/src/app/f/[publicId]/page.tsx, frontend/src/components/player/FormPlayer.tsx, QuestionView.tsx, frontend/src/lib/validation.ts | ✅ Done | Interactive player, progress/footer, mobile layout, keyboard navigation, validation, loading/error states, submit flow |
+| 16 – Preview and Share wiring | frontend/src/components/builder/TopBar.tsx, backend/app/routers/forms.py | ✅ Done | New-tab draft preview, Preview mode ribbon, Share copy/open controls, unpublished messaging |
+| 17 – Documentation and verification | PROGRESS.md, DECISIONS.md | ✅ Done | Backend pytest, Vitest, lint, TypeScript, and production build all pass |

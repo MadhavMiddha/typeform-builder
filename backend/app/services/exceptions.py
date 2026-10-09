@@ -8,8 +8,9 @@ from __future__ import annotations
 class NotFoundError(Exception):
     """Raised when the requested resource does not exist."""
 
-    def __init__(self, message: str = "Resource not found.") -> None:
+    def __init__(self, message: str = "Resource not found.", code: str = "NOT_FOUND") -> None:
         self.message = message
+        self.code = code
         super().__init__(message)
 
 

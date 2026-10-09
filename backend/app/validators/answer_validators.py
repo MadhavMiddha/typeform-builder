@@ -8,6 +8,7 @@ a pydantic ValidationError with a structured ``fields`` payload.
 from __future__ import annotations
 
 import re
+import math
 from typing import Any, Dict, List, Optional, Set
 
 from pydantic import ValidationError, field_validator
@@ -77,9 +78,13 @@ def validate_email(raw_value: Any, required: bool, settings: Dict[str, Any]) -> 
 def validate_number(raw_value: Any, required: bool, settings: Dict[str, Any]) -> Optional[float]:
     if _require_non_empty(raw_value, required):
         return None
+    if isinstance(raw_value, bool):
+        raise _FieldError("value", "Please enter a valid number.")
     try:
         num = float(raw_value)
     except (TypeError, ValueError):
+        raise _FieldError("value", "Please enter a valid number.")
+    if not math.isfinite(num):
         raise _FieldError("value", "Please enter a valid number.")
     min_val = settings.get("number_min")
     max_val = settings.get("number_max")
@@ -100,7 +105,7 @@ def validate_yes_no(raw_value: Any, required: bool, settings: Dict[str, Any]) ->
             return True
         if raw_value.lower() in ("false", "no", "n", "0"):
             return False
-    if isinstance(raw_value, int):
+    if isinstance(raw_value, int) and raw_value in (0, 1):
         return bool(raw_value)
     raise _FieldError("value", "Please answer Yes or No.")
 
@@ -142,6 +147,8 @@ def validate_multiple_choice(
     else:
         raise _FieldError("value", "Invalid option selection.")
 
+    if any(isinstance(i, bool) for i in ids):
+        raise _FieldError("value", "Option ids must be integers.")
     try:
         id_ints: List[int] = [int(i) for i in ids]
     except (TypeError, ValueError):
@@ -180,6 +187,8 @@ def validate_dropdown(
             raise _FieldError("value", "Dropdown accepts exactly one selection.")
         raw_value = raw_value[0]
 
+    if isinstance(raw_value, bool):
+        raise _FieldError("value", "Option id must be an integer.")
     try:
         id_int = int(raw_value)
     except (TypeError, ValueError):

@@ -137,9 +137,13 @@ export const endpoints = {
   },
 
   public: {
-    form: (publicId: string) => `/public/forms/${publicId}`,
+    form: (publicId: string) => `/api/public/forms/${publicId}`,
     start: (publicId: string) =>
-      `/public/forms/${publicId}/responses/start`,
-    submit: (publicId: string) => `/public/forms/${publicId}/responses`,
+      `/api/public/forms/${publicId}/responses/start`,
+    submit: (publicId: string) => `/api/public/forms/${publicId}/responses`,
+  },
+
+  preview: {
+    form: (formId: number) => `/api/forms/${formId}/preview`,
   },
 } as const;

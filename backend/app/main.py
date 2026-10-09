@@ -9,12 +9,14 @@ from typing import Any
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import inspect, text
 
 from app.config import settings
 from app.db import Base, engine
 from app.validators.answer_validators import AnswerValidationError
 from app.routers import forms as forms_router
 from app.routers import questions as questions_router
+from app.routers import public as public_router
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,14 @@ async def lifespan(app: FastAPI):
 
     logger.info("Creating database tables if they do not exist...")
     Base.metadata.create_all(bind=engine)
+    if engine.dialect.name == "sqlite":
+        columns = {column["name"] for column in inspect(engine).get_columns("responses")}
+        if "token" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE responses ADD COLUMN token VARCHAR(64)"))
+                connection.execute(
+                    text("CREATE UNIQUE INDEX IF NOT EXISTS ix_responses_token ON responses(token)")
+                )
     logger.info("Database ready.")
     yield
 
@@ -124,4 +134,4 @@ async def health() -> dict:
 # ---------------------------------------------------------------------------
 app.include_router(forms_router.router)
 app.include_router(questions_router.router)
-
+app.include_router(public_router.router)

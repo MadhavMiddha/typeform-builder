@@ -85,6 +85,9 @@ All endpoints under `/api`. Error shape: `{"error":{"code":str,"message":str,"fi
 | POST | /public/forms/{public_id}/responses/start | Start response |
 | POST | /public/forms/{public_id}/responses | Submit response |
 
+Public response continuation IDs are opaque, single-response tokens; the
+database response primary key is never accepted as authorization for submit.
+
 ## Assumptions
 - No real authentication; default user seeded as id=1.
 - SQLite for development; schema is portable to PostgreSQL with minor changes.
