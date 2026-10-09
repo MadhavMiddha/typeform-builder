@@ -179,3 +179,13 @@
 - Final README documentation with architecture overview, schema, API endpoints, setup commands, and assumptions.
 - End-to-end integration automated test suite covering full respondent journey and export verification.
 
+## Parity Pass – Part B Shared Header and Share Dialog
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| 1. FormHeader with Content / Workflow / Connect / Share / Results tabs, 2px active underline, Workflow/Connect coming soon | PASS | FormHeader.tsx created and active underline reflects route, tooltips on disabled tabs. |
+| 2. Share modal dialog (radius 20px, overlay, Esc closes, keeps background page) | PASS | ShareDialog.tsx built with Radix dialog, radius 20px, dark button, Esc closing without page navigation. |
+| 3. Dialog contents: Copy link row + QR code (qrcode.react) + Link preview + Social buttons + Embed snippet iframe copy | PASS | Built with QRCodeSVG, Facebook/LinkedIn/X intent links, iframe snippet copy, and preview card. |
+| 4. Draft state: 'This form is a draft. Publish it to get a shareable link.' + Publish form button | PASS | Conditional render handles draft forms, triggers publish mutation, then reveals share controls. |
+| 5. Header quick copy-link button preserved with tooltip and draft disabled state | PASS | Verified in FormHeader.tsx quick link button. |
+
