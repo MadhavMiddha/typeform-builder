@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "@/lib/api/forms";
-import { useFormSummary, useResponses } from "@/lib/api/results";
+import { useFormSummary } from "@/lib/api/results";
 import { BuilderProvider, useBuilderStore } from "@/hooks/useBuilderStore";
 import { FormHeader } from "@/components/builder/FormHeader";
 import { PerformanceView } from "@/components/results/PerformanceView";
@@ -26,7 +26,7 @@ function ResultsContent({ form }: { form: FormRead }) {
     tabParam === "summary" || tabParam === "responses" ? tabParam : "performance";
 
   const summary = useFormSummary(form.id);
-  const responsesQuery = useResponses(form.id, 1, 10, "all");
+  const totalResponses = summary.data?.total_responses ?? 0;
 
   useEffect(() => {
     dispatch({ type: "SET_FORM", payload: form });
@@ -38,7 +38,6 @@ function ResultsContent({ form }: { form: FormRead }) {
     router.replace(`/forms/${form.id}/results?${params.toString()}`);
   };
 
-  const totalResponses = responsesQuery.data?.total ?? summary.data?.total_responses ?? 0;
 
   return (
     <div className="min-h-screen bg-[#f7f7f7] text-[#262627]">
@@ -138,7 +137,13 @@ function ResultsContent({ form }: { form: FormRead }) {
           )
         )}
 
-        {activeTab === "responses" && <ResponsesView form={form} />}
+        {activeTab === "responses" && (
+          <div className="-mx-6 -mb-6" style={{ height: "calc(100vh - 220px)" }}>
+            <Suspense fallback={<div className="p-8"><Skeleton className="h-40 w-full" /></div>}>
+              <ResponsesView form={form} />
+            </Suspense>
+          </div>
+        )}
       </main>
     </div>
   );

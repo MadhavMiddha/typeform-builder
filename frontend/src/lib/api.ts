@@ -126,6 +126,9 @@ export const endpoints = {
         `/api/forms/${formId}/responses/${rid}`,
       summary: (formId: number) => `/api/forms/${formId}/summary`,
       export: (formId: number) => `/api/forms/${formId}/responses/export.csv`,
+      exportV2: (formId: number, format: string, params?: string) =>
+        `/api/forms/${formId}/responses/export?format=${format}${params ? `&${params}` : ""}`,
+      deleteResponse: (formId: number, rid: number) => `/api/forms/${formId}/responses/${rid}`,
     },
   },
 

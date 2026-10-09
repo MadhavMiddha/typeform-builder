@@ -15,3 +15,4 @@ pytest-anyio==0.0.0
 # Utilities
 nanoid==2.0.0
 python-dotenv==1.1.0
+openpyxl==3.1.5

@@ -89,6 +89,7 @@ def list_responses(
         .offset((page - 1) * page_size)
         .limit(page_size)
     ).all()
+
     def parse_previews(value: Any) -> dict[str, str]:
         if not value:
             return {}
@@ -153,6 +154,17 @@ def get_response(db: Session, form_id: int, response_id: int, user_id: int) -> R
     )
 
 
+def delete_response(db: Session, form_id: int, response_id: int, user_id: int) -> None:
+    _form(db, form_id, user_id)
+    response = db.execute(
+        select(Response).where(Response.id == response_id, Response.form_id == form_id)
+    ).scalar_one_or_none()
+    if response is None:
+        raise NotFoundError(f"Response {response_id} not found.")
+    db.delete(response)
+    db.commit()
+
+
 def get_summary(
     db: Session,
     form_id: int,
@@ -164,7 +176,7 @@ def get_summary(
 ) -> ResultsSummary:
     _form(db, form_id, user_id)
     abandoned_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=30)
-    
+
     resp_filters = [Response.form_id == form_id]
     if status in ("completed", "partial"):
         resp_filters.append(Response.status == status)
@@ -313,79 +325,185 @@ def get_summary(
 
 
 def _csv_safe(value: Any) -> str:
+    """Prefix formula-injection characters with an apostrophe."""
     text = "" if value is None else str(value)
     return "'" + text if text[:1] in ("=", "+", "-", "@") else text
 
 
-def export_csv(db: Session, form_id: int, user_id: int) -> Iterator[str]:
-    _form(db, form_id, user_id)
-    questions = db.scalars(
+def _fmt_dt(value: datetime | None) -> str:
+    """Format a datetime as 'YYYY-MM-DD HH:mm:ss' (no T, no Z, no fractions)."""
+    if value is None:
+        return ""
+    return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _collect_export_rows(
+    db: Session,
+    form_id: int,
+    user_id: int,
+    *,
+    ids: list[int] | None = None,
+    status: str | None = None,
+    from_date: datetime | None = None,
+    to_date: datetime | None = None,
+    q: str | None = None,
+) -> tuple[Form, list[Question], list[dict[str, Any]]]:
+    """Validate ownership, fetch questions, and collect all rows as dicts."""
+    form = _form(db, form_id, user_id)
+    questions = list(db.scalars(
         select(Question).where(Question.form_id == form_id)
         .options(selectinload(Question.options)).order_by(Question.position)
-    ).all()
-    headers = ["submitted_at"] + [q.title for q in questions]
-    output = io.StringIO()
-    writer = csv.writer(output, lineterminator="\r\n")
-    writer.writerow([_csv_safe(x) for x in headers])
-    yield output.getvalue()
-    output.seek(0); output.truncate(0)
-    # Stream one ordered join instead of materializing response IDs and issuing
-    # one relationship query per response. Multiple rows for an answer are
-    # produced when it has multiple selected options and are folded below.
+    ).all())
+
+    filters: list[Any] = [Response.form_id == form_id]
+    if ids:
+        filters.append(Response.id.in_(ids))
+    if status in ("completed", "partial"):
+        filters.append(Response.status == status)
+    elif not ids:
+        # Default: only completed when no specific ids filter
+        filters.append(Response.status == "completed")
+    if from_date:
+        filters.append(Response.started_at >= from_date)
+    if to_date:
+        filters.append(Response.started_at <= to_date)
+    if q and q.strip():
+        q_term = f"%{q.strip()}%"
+        matching_rids = select(Answer.response_id).where(Answer.value_text.ilike(q_term))
+        filters.append(Response.id.in_(matching_rids))
+
     rows = db.execute(
         select(
-            Response.id,
-            Response.submitted_at,
-            Answer.question_id,
-            Answer.value_text,
-            Answer.value_number,
-            Answer.value_bool,
+            Response.id, Response.status, Response.started_at, Response.submitted_at,
+            Answer.question_id, Answer.value_text, Answer.value_number, Answer.value_bool,
             QuestionOption.label,
         )
         .outerjoin(Answer, Answer.response_id == Response.id)
         .outerjoin(AnswerOption, AnswerOption.answer_id == Answer.id)
         .outerjoin(QuestionOption, QuestionOption.id == AnswerOption.option_id)
-        .where(Response.form_id == form_id, Response.status == "completed")
+        .where(*filters)
         .order_by(
-            Response.submitted_at,
-            Response.id,
-            Answer.id,
-            QuestionOption.position,
-            AnswerOption.option_id,
+            func.coalesce(Response.submitted_at, Response.started_at).desc(),
+            Response.id.desc(), Answer.id, QuestionOption.position, AnswerOption.option_id,
         )
     ).yield_per(500)
 
+    result_rows: list[dict[str, Any]] = []
     current_id: int | None = None
-    submitted_at: datetime | None = None
+    current_row: dict[str, Any] = {}
     values: dict[int, str] = {}
-    for response_id, response_submitted_at, question_id, value_text, value_number, value_bool, option_label in rows:
+
+    def _flush() -> None:
+        result_rows.append({
+            "id": current_row["id"], "status": current_row["status"],
+            "started_at": current_row["started_at"], "submitted_at": current_row["submitted_at"],
+            "values": dict(values),
+        })
+
+    for response_id, resp_status, started_at, submitted_at, question_id, value_text, value_number, value_bool, option_label in rows:
         if current_id is not None and response_id != current_id:
-            writer.writerow([
-                _csv_safe(x)
-                for x in [submitted_at] + [values.get(q.id, "") for q in questions]
-            ])
-            yield output.getvalue()
-            output.seek(0); output.truncate(0)
+            _flush()
             values = {}
-        current_id = response_id
-        submitted_at = response_submitted_at
+        if current_id != response_id:
+            current_id = response_id
+            current_row = {"id": response_id, "status": resp_status, "started_at": started_at, "submitted_at": submitted_at}
         if question_id is None:
             continue
         if value_text is not None:
             values[question_id] = value_text
         elif value_number is not None:
-            values[question_id] = str(value_number)
+            v = value_number
+            values[question_id] = str(int(v) if v == int(v) else v)
         elif value_bool is not None:
-            values[question_id] = str(value_bool).lower()
+            values[question_id] = "Yes" if value_bool else "No"
         elif option_label is not None:
             values[question_id] = (
-                f"{values[question_id]}, {option_label}"
-                if question_id in values else option_label
+                f"{values[question_id]}, {option_label}" if question_id in values else option_label
             )
 
     if current_id is not None:
-        writer.writerow([
-            _csv_safe(x)
-            for x in [submitted_at] + [values.get(q.id, "") for q in questions]
-        ])
+        _flush()
+
+    return form, questions, result_rows
+
+
+def _build_headers(questions: list[Question]) -> list[str]:
+    return ["#"] + [q.title for q in questions] + ["Response Type", "Start Date", "Submit Date", "Ending"]
+
+
+def _row_cells(form: Form, questions: list[Question], row: dict[str, Any]) -> list[str]:
+    cells = [str(row["id"])]
+    for q in questions:
+        cells.append(row["values"].get(q.id, ""))
+    cells.append(row["status"].capitalize())
+    cells.append(_fmt_dt(row["started_at"]))
+    cells.append(_fmt_dt(row["submitted_at"]) if row["submitted_at"] else "")
+    cells.append((form.thank_you_title or "") if row["status"] == "completed" else "")
+    return cells
+
+
+def export_csv(
+    db: Session,
+    form_id: int,
+    user_id: int,
+    *,
+    ids: list[int] | None = None,
+    status: str | None = None,
+    from_date: datetime | None = None,
+    to_date: datetime | None = None,
+    q: str | None = None,
+) -> Iterator[str]:
+    """Stream a UTF-8-with-BOM CSV with new column layout (Part G.4)."""
+    form, questions, data_rows = _collect_export_rows(
+        db, form_id, user_id, ids=ids, status=status, from_date=from_date, to_date=to_date, q=q)
+    headers = _build_headers(questions)
+    output = io.StringIO()
+    output.write("\ufeff")  # UTF-8 BOM
+    writer = csv.writer(output, lineterminator="\r\n")
+    writer.writerow([_csv_safe(h) for h in headers])
+    yield output.getvalue()
+    output.seek(0)
+    output.truncate(0)
+    for row in data_rows:
+        writer.writerow([_csv_safe(c) for c in _row_cells(form, questions, row)])
         yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+
+def export_xlsx(
+    db: Session,
+    form_id: int,
+    user_id: int,
+    *,
+    ids: list[int] | None = None,
+    status: str | None = None,
+    from_date: datetime | None = None,
+    to_date: datetime | None = None,
+    q: str | None = None,
+) -> bytes:
+    """Build an XLSX workbook in memory with bold frozen header and auto-sized columns."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    form, questions, data_rows = _collect_export_rows(
+        db, form_id, user_id, ids=ids, status=status, from_date=from_date, to_date=to_date, q=q)
+    headers = _build_headers(questions)
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Responses"
+    for col_idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(fill_type="solid", fgColor="F5F5F5")
+    ws.freeze_panes = "A2"
+    for row_idx, row in enumerate(data_rows, start=2):
+        for col_idx, value in enumerate(_row_cells(form, questions, row), start=1):
+            ws.cell(row=row_idx, column=col_idx, value=value)
+    for col_cells in ws.columns:
+        max_len = max((len(str(cell.value or "")) for cell in col_cells), default=0)
+        ws.column_dimensions[get_column_letter(col_cells[0].column)].width = min(max_len + 2, 60)
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
