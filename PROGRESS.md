@@ -206,5 +206,15 @@
 |---|---|---|
 | 1. Remove big hero banner and Summary/Responses toggle, #f7f7f7 background under FormHeader | PASS | ResultsPage refactored with clean FormHeader, #f7f7f7 surface, and zero violet gradients. |
 | 2. Sub-tab bar in rounded 16px #f5f5f5 container ('Form performance', 'Response summary', 'Responses [N]'), 2px underline, ?tab= URL sync, default performance | PASS | Implemented in ResultsContent with query param sync and dynamic response counts. |
-| 3. Form performance: 5 stat cards (white, radius 16, neutral grey icons, big number), Responses over time chart in #a666bb with ticks, tooltip, and empty state | PASS | PerformanceView.tsx built with #a666bb bars, short dates, integer Y ticks, and hover tooltips. Backend GET /stats and /summary accept days, from, to, status. |
+| 3. Form performance: 5 stat cards (white, radius 16, neutral grey icons, big number), Responses over time chart in #a666bb with ticks, tooltip, and empty state | PASS | PerformanceView.tsx built with #a666bb bars, short dates, integer Y ticks, and hover tooltips. Backend GET /stats and /summary accept days, from, to, status. |## Parity Pass – Part E Response Summary
+
+| Requirement | Status | Evidence |
+|---|---|---|
+| 1. Toolbar above cards: compact/expanded toggle, question sort order, segmented # / % toggle, 'All time' dropdown, 'Filters' popover | PASS | SummaryView.tsx toolbar implemented with all toggles and state controls. |
+| 2. White radius-16 cards (24px padding), QuestionTypeBadge with number, title 20px weight 400, 'N out of M people answered', 1px divider | PASS | Implemented in QuestionSummaryCard. |
+| 3. Multiple choice/dropdown/yes-no: VERTICAL bar chart in #a666bb, count/% above bars, integer gridlines, option names under bars, zero thin line, table/horizontal/vertical views, Overview control with Trends coming soon | PASS | Implemented in ChoiceChart component. |
+| 4. Rating and number: Mean, Median, Standard deviation (n-1 sample std dev) tiles with tooltip, distribution bar chart | PASS | NumericSummary calculates Mean, Median, and sample std dev (n-1), tested in backend results_service.py and verified. |
+| 5. Short/long text/email: Search responses input with 'N results', 2-column grid of quote cards with quote icon, 'Show more' button | PASS | TextResponsesGrid implements client filtering, quote cards, and progressive display. |
+| 6. Zero answers: centred 'Waiting for responses' / 'Your data will appear here.' | PASS | Implemented for zero-response questions. |
+| 7. Horizontal progress bar breakdown completely replaced | PASS | Legacy QuestionCard and grid removed and replaced with modern Typeform parity cards. |
 | 10. Visual parity on choice, yes/no, rating (column alignment, letter badges, no boxed inputs) | PASS | Verified in QuestionView.tsx. |
