@@ -218,3 +218,28 @@
 | 6. Zero answers: centred 'Waiting for responses' / 'Your data will appear here.' | PASS | Implemented for zero-response questions. |
 | 7. Horizontal progress bar breakdown completely replaced | PASS | Legacy QuestionCard and grid removed and replaced with modern Typeform parity cards. |
 | 10. Visual parity on choice, yes/no, rating (column alignment, letter badges, no boxed inputs) | PASS | Verified in QuestionView.tsx. |
+
+## Parity Pass state for Phase 7
+
+| Part | Status | Evidence |
+|---|---|---|
+| A – Dashboard and builder parity | DONE | Existing Phase 3 visual refinement and browser audit tables above. |
+| B – Shared header and share dialog | DONE | FormHeader and ShareDialog evidence above. |
+| C – Respondent flow visual parity | DONE | FormPlayer and QuestionView evidence above. |
+| D – Results shell and performance | DONE | ResultsContent and PerformanceView evidence above. |
+| E – Response summary | DONE | SummaryView and QuestionSummaryCard evidence above. |
+| F – Response table and drawer parity | NOT DONE | No parity-pass F section is present in the recorded progress. |
+| G – Export and responsive parity | NOT DONE | No parity-pass G section is present in the recorded progress. |
+| H – End-to-end parity closeout | NOT DONE | No parity-pass H section or closeout evidence is present in the recorded progress. |
+
+## Phase 7 – Part 1 deployment readiness
+
+| Item | File(s) | Status | Evidence |
+|---|---|---|---|
+| Environment configuration and examples | backend/app/config.py, backend/.env.example, frontend/.env.example | DONE | Explicit settings, safe local defaults, and documented placeholders. |
+| Empty-database startup seed | backend/app/main.py, backend/scripts/seed.py | DONE | Fresh SQLite startup created tables and exactly 3 forms; existing forms are not reseeded. |
+| Render and Docker deployment | backend/render.yaml, backend/Dockerfile | DONE | Native Python service, health check, Python 3.11.9, cached requirements layer, non-root image user. |
+| Proxy-aware rate limiting and headers | backend/app/routers/public.py, backend/app/middleware/rate_limit.py, frontend/next.config.ts | DONE | Production uses first forwarded hop; dev uses socket address; public form pages omit X-Frame-Options. |
+| Frontend URL configuration | frontend/src/lib/*.ts, frontend/src/components/builder/ShareDialog.tsx | DONE | URLs use environment configuration or browser origin; source grep has no hard-coded localhost URLs. |
+| Smoke scripts | scripts/smoke_test.sh, scripts/smoke_test.ps1 | DONE | PowerShell smoke test passed health, list, public fetch, valid/invalid submit, and summary. |
+| Part 1 quality checks | backend tests; frontend typecheck, lint, build | DONE | 159 backend tests passed; frontend typecheck, lint, and production build passed. |

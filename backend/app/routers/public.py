@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.config import settings
 from app.middleware.rate_limit import public_post_limiter
 from app.schemas.public import PublicFormRead, PublicQuestionRead
 from app.schemas.response import AnswerRead, ResponseStartRead, ResponseSubmit, ResponseRead
@@ -41,9 +42,10 @@ def _err(
 
 
 def _client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    if settings.ENV.lower() == "prod":
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
     if request.client:
         return request.client.host
     return "unknown"

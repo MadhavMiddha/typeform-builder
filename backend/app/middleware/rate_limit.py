@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from threading import Lock
 from typing import Deque, Dict, Tuple
 
+from app.config import settings
+
 
 @dataclass
 class RateLimitConfig:
@@ -40,4 +42,9 @@ class InMemoryRateLimiter:
             return True, 0
 
 
-public_post_limiter = InMemoryRateLimiter()
+public_post_limiter = InMemoryRateLimiter(
+    RateLimitConfig(
+        max_requests=settings.RATE_LIMIT_MAX_REQUESTS,
+        window_seconds=settings.RATE_LIMIT_WINDOW_SECONDS,
+    )
+)

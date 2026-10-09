@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { api, endpoints } from "@/lib/api";
 import type { FormSummary, ResponsePage, ResponseRead } from "@/lib/types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (typeof window !== "undefined" ? window.location.origin : "");
 
 export const resultKeys = {
   all: ["results"] as const,

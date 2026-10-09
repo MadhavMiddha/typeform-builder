@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import inspect, text
+from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import Base, engine
@@ -40,6 +41,10 @@ async def lifespan(app: FastAPI):
                 connection.execute(
                     text("CREATE UNIQUE INDEX IF NOT EXISTS ix_responses_token ON responses(token)")
                 )
+    with Session(engine) as db:
+        from scripts.seed import seed_if_empty
+
+        seed_if_empty(db)
     logger.info("Database ready.")
     yield
 

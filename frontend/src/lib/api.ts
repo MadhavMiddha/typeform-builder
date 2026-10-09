@@ -1,14 +1,15 @@
 /**
  * Typed fetch wrapper.
  *
- * - Base URL from NEXT_PUBLIC_API_URL (defaults to http://localhost:8000)
+ * - Base URL from NEXT_PUBLIC_API_URL (or the browser origin for same-origin deployments)
  * - All responses expected as JSON
  * - Throws ApiError on non-2xx, carrying the backend error shape
  */
 import type { ApiErrorDetail } from "@/lib/types";
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_URL ??
+  (typeof window !== "undefined" ? window.location.origin : "");
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Error class

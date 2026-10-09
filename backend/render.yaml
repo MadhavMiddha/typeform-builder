@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: typeform-builder-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        value: sqlite:///./db.sqlite3
+      - key: ENV
+        value: prod
+      - key: CORS_ORIGINS
+        sync: false
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "30"
+      - key: RATE_LIMIT_WINDOW_SECONDS
+        value: "60"
+      - key: DEFAULT_USER_EMAIL
+        sync: false
+      - key: DEFAULT_USER_NAME
+        value: Default Creator

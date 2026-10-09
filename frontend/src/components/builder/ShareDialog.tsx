@@ -8,7 +8,7 @@ import { Link2, ExternalLink, QrCode, Copy, Check, Globe, Mail, ChevronDown } fr
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { usePublishForm } from "@/lib/api/forms";
-import { cn } from "@/lib/utils";
+import { cn, publicFormUrl } from "@/lib/utils";
 import type { FormRead } from "@/lib/types";
 
 interface ShareDialogProps {
@@ -25,8 +25,7 @@ export function ShareDialog({ open, onOpenChange, form }: ShareDialogProps) {
   const publishForm = usePublishForm();
 
   const isPublished = form.status === "published";
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const publicUrl = `${origin}/f/${form.public_id}`;
+  const publicUrl = publicFormUrl(form.public_id);
   const embedCode = `<iframe src="${publicUrl}" style="width:100%;height:600px;border:0" title="${form.title}"></iframe>`;
 
   const handleCopyLink = async () => {

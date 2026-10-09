@@ -30,6 +30,7 @@ from app.models import (
     Response,
     User,
 )
+from sqlalchemy import func
 
 RNG = random.Random(42)
 
@@ -364,6 +365,18 @@ def seed_form3(db, user_id: int) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+def seed_if_empty(db) -> bool:
+    """Seed only a genuinely empty database; never add demo rows to existing data."""
+    if db.query(func.count(Form.id)).scalar():
+        return False
+    user = get_or_create_user(db)
+    seed_form1(db, user.id)
+    seed_form2(db, user.id)
+    seed_form3(db, user.id)
+    db.commit()
+    return True
+
+
 def main() -> None:
     print("=== Seed script starting ===")
     # Ensure tables exist
@@ -372,11 +385,7 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        user = get_or_create_user(db)
-        seed_form1(db, user.id)
-        seed_form2(db, user.id)
-        seed_form3(db, user.id)
-        db.commit()
+        seed_if_empty(db)
         print("=== Seed complete ===")
     except Exception:
         db.rollback()
