@@ -17,6 +17,7 @@ from app.validators.answer_validators import AnswerValidationError
 from app.routers import forms as forms_router
 from app.routers import questions as questions_router
 from app.routers import public as public_router
+from app.routers import results as results_router
 
 logger = logging.getLogger(__name__)
 
@@ -135,3 +136,4 @@ async def health() -> dict:
 app.include_router(forms_router.router)
 app.include_router(questions_router.router)
 app.include_router(public_router.router)
+app.include_router(results_router.router)

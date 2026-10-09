@@ -5,7 +5,7 @@
 - [x] Phase 2: Backend Core API & Form/Question Management
 - [x] Phase 3: Form Builder (Canvas, Settings, Drag & Drop, Autosave)
 - [x] Phase 4: Public Respondent Flow + Submission API
-- [ ] Phase 5: Creator Dashboard & Form Lifecycle Management
+- [x] Phase 5: Creator Dashboard & Form Lifecycle Management
 - [ ] Phase 6: Response Handling, Server Validation & Seed Data
 - [ ] Phase 7: Respondent Experience (/f/[publicId], Keyboard Nav, Animations)
 - [ ] Phase 8: Results View (Summary, Responses Table, Drawer, CSV Export) & Polish
@@ -110,3 +110,18 @@
 | 6–15 – Respondent player UX | frontend/src/app/f/[publicId]/page.tsx, frontend/src/components/player/FormPlayer.tsx, QuestionView.tsx, frontend/src/lib/validation.ts | ✅ Done | Interactive player, progress/footer, mobile layout, keyboard navigation, validation, loading/error states, submit flow |
 | 16 – Preview and Share wiring | frontend/src/components/builder/TopBar.tsx, backend/app/routers/forms.py | ✅ Done | New-tab draft preview, Preview mode ribbon, Share copy/open controls, unpublished messaging |
 | 17 – Documentation and verification | PROGRESS.md, DECISIONS.md | ✅ Done | Backend pytest, Vitest, lint, TypeScript, and production build all pass |
+
+## Phase 5 – Results
+
+| Item | File(s) | Status | Evidence |
+|------|---------|--------|----------|
+| 1 – Results service with aggregate SQL, response listing/detail, summary metrics, and streamed CSV | backend/app/services/results_service.py, backend/app/schemas/results.py | ✅ Done | SQL `COUNT`/`AVG`/`MIN`/`MAX`/`GROUP BY`, deterministic pagination, 14-day zero-filled series, typed question stats, completed-response CSV |
+| 2 – Scoped results routers | backend/app/routers/results.py, backend/app/main.py | ✅ Done | Four `/api/forms/{id}/...` endpoints enforce current-user ownership |
+| 3 – Results backend tests | backend/tests/test_results.py | ✅ Done | 24 focused tests; full backend suite passes with 147 tests |
+| 4 – Results route and shared builder top bar | frontend/src/app/forms/[id]/results/page.tsx, frontend/src/components/builder/TopBar.tsx | ✅ Done | `/forms/[id]/results`, active Results tab, Summary/Responses navigation |
+| 5 – Summary tab | frontend/src/components/results/SummaryView.tsx | ✅ Done | Stat cards, 14-day CSS bar chart, numbered question-order cards, percentage bars, skipped counts, and type-specific visualizations |
+| 6 – Responses tab | frontend/src/components/results/ResponsesView.tsx | ✅ Done | Status filter, first three question columns, truncation/tooltips, sticky header, pagination, refresh, polling, loading/error/empty states |
+| 7 – Response drawer | frontend/src/components/results/ResponsesView.tsx, frontend/src/lib/api/results.ts | ✅ Done | Typed answer formatting, exact “No answer” state, visible previous/next arrows, Escape and arrow-key navigation |
+| 8 – CSV download | frontend/src/components/results/ResponsesView.tsx, frontend/src/lib/api/results.ts | ✅ Done | Download action with sanitized form-title and date filename |
+| 9 – Shared results data/query behavior | frontend/src/lib/api/results.ts, frontend/src/lib/types.ts | ✅ Done | Shared query keys, status-aware response keys, 30-second polling and refresh |
+| 10 – Documentation and verification | PROGRESS.md, DECISIONS.md | ✅ Done | Backend 147 tests, frontend lint, TypeScript, production build, CSV streaming, and query-plan audit pass |

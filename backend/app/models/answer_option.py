@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 
 class AnswerOption(Base):
     __tablename__ = "answer_options"
+    __table_args__ = (
+        Index("ix_answer_options_option_id_answer_id", "option_id", "answer_id"),
+    )
 
     answer_id: Mapped[int] = mapped_column(
         ForeignKey("answers.id", ondelete="CASCADE"), primary_key=True

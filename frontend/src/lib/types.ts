@@ -185,6 +185,7 @@ export interface AnswerRead {
   value_number: number | null;
   value_bool: boolean | null;
   chosen_option_ids: number[];
+  chosen_options?: string[];
 }
 
 export interface ResponseRead {
@@ -202,6 +203,44 @@ export interface ResponseListItem {
   started_at: string;
   submitted_at: string | null;
   answer_count: number;
+  answer_preview?: string | null;
+  answer_previews?: Record<string, string>;
+}
+
+export interface ResponsePage {
+  items: ResponseListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface QuestionSummary {
+  question_id: number;
+  title?: string;
+  type?: QuestionType;
+  total?: number;
+  choices?: Array<{ label: string; count: number; option_id?: number }>;
+  average?: number | null;
+  distribution?: Record<string, number>;
+  minimum?: number | null;
+  maximum?: number | null;
+  answered_count?: number;
+  latest_answers?: string[];
+  skipped_count?: number;
+  yes_count?: number;
+  no_count?: number;
+  percentages?: Array<{ label: string; percentage: number; count?: number }>;
+}
+
+export interface FormSummary {
+  total_responses: number;
+  completed_responses: number;
+  partial_responses?: number;
+  completion_rate: number;
+  questions: QuestionSummary[];
+  responses_per_day?: Array<{ date: string; count: number }>;
+  average_time_seconds?: number | null;
 }
 
 export interface ResponseStartRead {

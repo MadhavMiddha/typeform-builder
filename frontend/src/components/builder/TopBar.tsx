@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/DropdownMenu";
 import { toast } from "sonner";
 
-export function TopBar({ onRetry }: { onRetry?: () => void }) {
+export function TopBar({ onRetry, activeTab = "content" }: { onRetry?: () => void; activeTab?: "content" | "share" | "results" }) {
   const router = useRouter();
   const { state, dispatch } = useBuilderStore();
   const form = state.form;
@@ -59,11 +59,11 @@ export function TopBar({ onRetry }: { onRetry?: () => void }) {
   };
 
   const tabs = [
-    { id: "content", label: "Content", disabled: false },
+    { id: "content", label: "Create", disabled: false },
     { id: "workflow", label: "Workflow", disabled: true },
     { id: "connect", label: "Connect", disabled: true },
     { id: "share", label: "Share", disabled: false },
-    { id: "results", label: "Results", disabled: true },
+    { id: "results", label: "Results", disabled: false },
   ];
 
   const publicUrl = form.public_id
@@ -125,8 +125,12 @@ export function TopBar({ onRetry }: { onRetry?: () => void }) {
           ) : (
             <button
               key={tab.id}
-              onClick={() => tab.id === "share" && setShowShare((visible) => !visible)}
-              className="h-14 px-4 text-xs font-semibold text-brand border-b-2 border-brand flex items-center"
+              onClick={() => {
+                if (tab.id === "share") setShowShare((visible) => !visible);
+                if (tab.id === "content") router.push(`/forms/${form.id}/edit`);
+                if (tab.id === "results") router.push(`/forms/${form.id}/results`);
+              }}
+              className={cn("h-14 px-4 text-xs font-semibold text-brand flex items-center", activeTab === tab.id && "border-b-2 border-brand")}
             >
               {tab.label}
             </button>
