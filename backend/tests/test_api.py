@@ -595,3 +595,92 @@ def test_38_publish_form_not_found(client):
     r = client.post("/api/forms/99999/publish")
     assert r.status_code == 404
     assert_error_shape(r.json())
+
+
+# ---------------------------------------------------------------------------
+# Tests 39-43: Reorder endpoint – comprehensive coverage
+# ---------------------------------------------------------------------------
+
+def test_39_reorder_questions_success(client):
+    """PUT /api/forms/{id}/questions/order reorders questions and returns them in new order."""
+    form = create_form(client)
+    q1 = add_question(client, form["id"], "short_text", "First")
+    q2 = add_question(client, form["id"], "short_text", "Second")
+    q3 = add_question(client, form["id"], "short_text", "Third")
+
+    new_order = [q3["id"], q1["id"], q2["id"]]
+    r = client.put(
+        f"/api/forms/{form['id']}/questions/order",
+        json={"ordered_ids": new_order},
+    )
+    assert r.status_code == 200
+    returned = r.json()
+    assert [q["id"] for q in returned] == new_order
+    # Positions should be 1-based and contiguous
+    assert [q["position"] for q in returned] == [1, 2, 3]
+
+    # Confirm persistence via GET
+    form_data = client.get(f"/api/forms/{form['id']}").json()
+    assert [q["id"] for q in form_data["questions"]] == new_order
+
+
+def test_40_reorder_missing_id(client):
+    """Submitting ordered_ids that omits an existing question id returns 422."""
+    form = create_form(client)
+    q1 = add_question(client, form["id"], "short_text", "Q1")
+    q2 = add_question(client, form["id"], "short_text", "Q2")
+
+    # Send only q1, omitting q2
+    r = client.put(
+        f"/api/forms/{form['id']}/questions/order",
+        json={"ordered_ids": [q1["id"]]},
+    )
+    assert r.status_code == 422
+    assert_error_shape(r.json())
+    assert "missing" in r.json()["error"]["message"].lower()
+
+
+def test_41_reorder_extra_id(client):
+    """Submitting ordered_ids with an unknown id returns 422."""
+    form = create_form(client)
+    q1 = add_question(client, form["id"], "short_text", "Q1")
+
+    r = client.put(
+        f"/api/forms/{form['id']}/questions/order",
+        json={"ordered_ids": [q1["id"], 999999]},
+    )
+    assert r.status_code == 422
+    assert_error_shape(r.json())
+    assert "unknown" in r.json()["error"]["message"].lower()
+
+
+def test_42_reorder_duplicate_id(client):
+    """Submitting ordered_ids with duplicate ids returns 422 (set mismatch)."""
+    form = create_form(client)
+    q1 = add_question(client, form["id"], "short_text", "Q1")
+    q2 = add_question(client, form["id"], "short_text", "Q2")
+
+    # Duplicate q1 – provided set {q1} != existing set {q1, q2}
+    r = client.put(
+        f"/api/forms/{form['id']}/questions/order",
+        json={"ordered_ids": [q1["id"], q1["id"]]},
+    )
+    assert r.status_code == 422
+    assert_error_shape(r.json())
+
+
+def test_43_reorder_id_from_another_form(client):
+    """Submitting a question id belonging to another form returns 422."""
+    form_a = create_form(client, "Form A")
+    form_b = create_form(client, "Form B")
+    qa = add_question(client, form_a["id"], "short_text", "From A")
+    qb = add_question(client, form_b["id"], "short_text", "From B")
+
+    # Try to place form_b's question in form_a's order
+    r = client.put(
+        f"/api/forms/{form_a['id']}/questions/order",
+        json={"ordered_ids": [qb["id"]]},
+    )
+    assert r.status_code == 422
+    assert_error_shape(r.json())
+
