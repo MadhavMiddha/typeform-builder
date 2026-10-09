@@ -38,6 +38,7 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
 
 # SQLite & Databases
 *.sqlite
@@ -58,3 +59,5 @@ db.sqlite3-wal
 Thumbs.db
 .vscode/
 .idea/
+
+coverage.xml
