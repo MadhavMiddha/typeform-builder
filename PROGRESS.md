@@ -188,4 +188,17 @@
 | 3. Dialog contents: Copy link row + QR code (qrcode.react) + Link preview + Social buttons + Embed snippet iframe copy | PASS | Built with QRCodeSVG, Facebook/LinkedIn/X intent links, iframe snippet copy, and preview card. |
 | 4. Draft state: 'This form is a draft. Publish it to get a shareable link.' + Publish form button | PASS | Conditional render handles draft forms, triggers publish mutation, then reveals share controls. |
 | 5. Header quick copy-link button preserved with tooltip and draft disabled state | PASS | Verified in FormHeader.tsx quick link button. |
+## Parity Pass – Part C Respondent Flow Visual Parity
 
+| Requirement | Status | Evidence |
+|---|---|---|
+| 1. Page background #fafafa, 100dvh, content vertically centered, column max 900px | PASS | FormPlayer.tsx styled with #fafafa, 100dvh, flex-1 justify-center max-w-[900px]. |
+| 2. Progress bar: thin 3px bar at very top, track #d9d9d9, fill #262627, 300ms transition | PASS | Fixed 3px top bar implemented in FormPlayer.tsx with motion width transition. |
+| 3. Question screen: 22px black rounded badge, white 12px bold number, title 32px / 1.25 weight 400 #262627, description 20px grey, asterisk | PASS | Implemented in QuestionView.tsx respondent view. |
+| 4. Input style: underline only, text 32px, placeholder 32px #b3b3b3, 1px grey underline to 2px #262627 focus, Shift+Enter hint for long text | PASS | Verified in QuestionView.tsx for short/long text, email, number. |
+| 5. Primary button: left-aligned dark rounded-8 'OK' / 'Submit', desktop Back/Continue removed | PASS | Implemented in QuestionView.tsx under input, desktop uses Enter, OK and bottom-right cluster. |
+| 6. Desktop bottom-right fixed cluster: up/down chevron buttons 40px square #262627 + 'Powered by Typeform Builder' pill | PASS | Implemented in FormPlayer.tsx with ChevronUp/ChevronDown and pill. |
+| 7. Welcome screen: title 44px weight 400, description 22px grey max 840px, dark button, clock icon 'Takes N minutes' | PASS | Rendered in FormPlayer.tsx welcome screen. |
+| 8. Validation error pill: #fdecea background, #f5c2bd border, #a23b2a text, warning icon, 150ms fade-in, exact copy | PASS | Implemented with AlertTriangle and clean copy without double periods. |
+| 9. Mobile (<768px): Back + OK + footer layout preserved without desktop chevron cluster | PASS | Verified mobile bar in FormPlayer.tsx with md:hidden. |
+| 10. Visual parity on choice, yes/no, rating (column alignment, letter badges, no boxed inputs) | PASS | Verified in QuestionView.tsx. |
