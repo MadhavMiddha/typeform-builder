@@ -13,6 +13,7 @@ import { Canvas } from "@/components/builder/Canvas";
 import { SettingsPanel } from "@/components/builder/SettingsPanel";
 import { AddQuestionPopover } from "@/components/builder/AddQuestionPopover";
 import { useAutosave } from "@/hooks/useAutosave";
+import { ShortcutHelp } from "@/components/builder/ShortcutHelp";
 
 function BuilderContent() {
   const params = useParams();
@@ -80,6 +81,7 @@ function BuilderContent() {
 
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden text-sm text-brand">
+      <ShortcutHelp />
       <TopBar onRetry={retry} />
       
       {/* Secondary toolbar row */}

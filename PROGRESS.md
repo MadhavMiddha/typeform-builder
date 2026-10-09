@@ -125,3 +125,38 @@
 | 8 – CSV download | frontend/src/components/results/ResponsesView.tsx, frontend/src/lib/api/results.ts | ✅ Done | Download action with sanitized form-title and date filename |
 | 9 – Shared results data/query behavior | frontend/src/lib/api/results.ts, frontend/src/lib/types.ts | ✅ Done | Shared query keys, status-aware response keys, 30-second polling and refresh |
 | 10 – Documentation and verification | PROGRESS.md, DECISIONS.md | ✅ Done | Backend 147 tests, frontend lint, TypeScript, production build, CSV streaming, and query-plan audit pass |
+
+## Phase 6 – Bonus features, response tracking and UX polish
+
+| Item | File(s) | Status | Evidence |
+|------|---------|--------|----------|
+| 1 – Basic logic jumps, path validation and visited-history navigation | backend/app/services/question_service.py, backend/app/services/response_service.py, backend/app/routers/public.py, frontend/src/components/player/formPlayerReducer.ts, frontend/tests/formPlayerReducer.test.ts | ✅ Done | Later-only destinations, valid operators, max five rules, public rules, path-based required validation, reducer jump/back test |
+| 2 – Partial tracking, completion rate and abandoned summaries | backend/app/services/results_service.py, backend/app/schemas/results.py, frontend/src/components/player/FormPlayer.tsx | ✅ Done | Response starts on first question; summary exposes completed/partial/abandoned and completion rate; stale partial cutoff is 30 minutes |
+| 3 – Custom themes and player variables | frontend/src/lib/types.ts, frontend/src/components/builder/SettingsPanel.tsx, frontend/src/components/player/FormPlayer.tsx | ✅ Done | Persisted theme fields, CSS variables, four presets, background image, contrast warning, and malformed-theme fallback |
+| 4 – Dashboard CSV row-menu access | frontend/src/components/dashboard/FormList.tsx | ✅ Done | Export CSV action uses the existing streamed export endpoint |
+| 5 – Reusable ComingSoon placeholders | frontend/src/components/ui/ComingSoon.tsx, frontend/src/components/builder/SettingsPanel.tsx | ✅ Done | Shared component is used for unavailable advanced logic, integrations and team/settings extras; dedicated routes are not part of the current route tree |
+| 6 – Consistent state audit and branded error pages | frontend/src/app/not-found.tsx, frontend/src/app/error.tsx | ✅ Done | Loading/empty/error matrix reviewed for dashboard, builder, player, results and global routes; success toasts use past tense and failures provide retry/action guidance |
+| 7 – Builder shortcut help dialog | frontend/src/components/builder/ShortcutHelp.tsx, frontend/src/app/forms/[id]/edit/page.tsx | ✅ Done | `?` opens accessible dialog and Escape closes it |
+| 8 – Metadata, favicon and public Open Graph | frontend/src/app/layout.tsx, frontend/src/app/f/[publicId]/page.tsx | ✅ Done | Root metadata/favicon and title-based public-form metadata |
+| 9 – Reference visual QA | reference/, frontend/src | ✅ Done | Reviewed dashboard, builder, player and results routes against the supplied reference screen set; corrected metadata, spacing/state treatments, focus/hover states and branded error surfaces |
+| 10 – Lazy loading, memoization and bundle report | frontend/src, frontend/.next | ✅ Done | Builder-only dnd-kit imports remain route-scoped; dashboard FormList is memoized; production build passed; largest chunks were 224.5 KB, 155.7 KB and 133.9 KB |
+| 11 – Phase documentation and verification | PROGRESS.md, DECISIONS.md | ✅ Done | Backend 147 tests, frontend 5 reducer tests, lint, TypeScript/build, Playwright browser regression, malformed-theme fallback, and diff check pass |
+
+### Phase 6 state audit
+
+| Surface | Loading | Empty | Error | Status |
+|---------|---------|-------|-------|--------|
+| Dashboard | ✅ | ✅ | ✅ | ✅ |
+| Builder | ✅ | n/a | ✅ | ✅ |
+| Public player | ✅ | n/a | ✅ | ✅ |
+| Results summary | ✅ | ✅ | ✅ | ✅ |
+| Results responses | ✅ | ✅ | ✅ | ✅ |
+| Global routes | n/a | n/a | ✅ | ✅ |
+
+### Phase 6 final audit
+
+- Route crawl: `/`, `/forms/1/edit`, `/forms/1/results`, `/f/feedback001`, and `/f/does-not-exist` all loaded successfully with no application exceptions or failed requests.
+- The invalid public-form route intentionally produces two API 404 responses; it renders the branded unavailable state and is not a broken-link failure.
+- Browser regression: 1 Playwright test passed after the dev server warmed up.
+- Production bundle inspection: largest JavaScript chunks were 224.5 KB, 155.7 KB, and 133.9 KB; the largest stylesheet was 48.0 KB.
+- The current application has no standalone Integrations, Team, or Settings-extras routes; the reusable placeholder is therefore wired at the available dashboard/builder surfaces rather than inventing unsupported routes.

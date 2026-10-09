@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from app.schemas.question import QuestionOptionRead
+from app.schemas.question import QuestionLogicRead, QuestionOptionRead
 
 
 class PublicQuestionRead(BaseModel):
@@ -17,6 +17,7 @@ class PublicQuestionRead(BaseModel):
     required: bool
     settings: Optional[Dict[str, Any]] = None
     options: List[QuestionOptionRead] = []
+    logic_rules: List[QuestionLogicRead] = []
 
     model_config = {"from_attributes": True}
 

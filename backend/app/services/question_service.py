@@ -399,11 +399,7 @@ def replace_logic(
     """
     Stub that validates and persists logic rules for a question.
 
-    Validates:
-    - operator is one of the 5 allowed values
-    - jump_to_question_id (if given) refers to a question in the same form
-    - jump_to_end must be bool
-    - each rule has exactly one destination (jump_to_question_id xor jump_to_end=True)
+    Validates destinations, operator compatibility, ordering, cycles, and rule count.
 
     Replaces ALL logic rules for the question.
     """
@@ -417,6 +413,24 @@ def replace_logic(
         .scalars()
         .all()
     )
+    positions = {
+        qid: position
+        for qid, position in db.execute(
+            select(Question.id, Question.position).where(Question.form_id == q.form_id)
+        ).all()
+    }
+    if len(logic_rules) > 5:
+        raise ValidationError("A question may have at most 5 logic rules.", {"rules": "Maximum 5 rules allowed."})
+    valid_by_type = {
+        "short_text": {"equals", "not_equals", "contains"},
+        "long_text": {"equals", "not_equals", "contains"},
+        "email": {"equals", "not_equals", "contains"},
+        "multiple_choice": {"equals", "not_equals", "contains"},
+        "dropdown": {"equals", "not_equals"},
+        "number": {"equals", "not_equals", "greater_than", "less_than"},
+        "rating": {"equals", "not_equals", "greater_than", "less_than"},
+        "yes_no": {"equals", "not_equals"},
+    }
 
     for i, rule in enumerate(logic_rules):
         operator = rule.get("operator")
@@ -424,6 +438,11 @@ def replace_logic(
             raise ValidationError(
                 f"Rule {i}: invalid operator {operator!r}.",
                 {"operator": f"Must be one of {sorted(VALID_OPERATORS)}."},
+            )
+        if operator not in valid_by_type.get(q.type, set()):
+            raise ValidationError(
+                f"Rule {i}: operator {operator!r} is not valid for {q.type}.",
+                {"operator": f"Invalid operator for {q.type}."},
             )
         jump_to = rule.get("jump_to_question_id")
         jump_end = bool(rule.get("jump_to_end", False))
@@ -437,6 +456,16 @@ def replace_logic(
             raise ValidationError(
                 f"Rule {i}: jump_to_question_id {jump_to} not in this form.",
                 {"jump_to_question_id": f"Question {jump_to} not found in form."},
+            )
+        if jump_to is None and not jump_end:
+            raise ValidationError(
+                f"Rule {i}: a destination is required.",
+                {"jump": "Choose a later question or the end of the form."},
+            )
+        if jump_to is not None and positions[jump_to] <= positions[q.id]:
+            raise ValidationError(
+                f"Rule {i}: jump destination must be later than the source.",
+                {"jump_to_question_id": "Rules may only target a later question."},
             )
 
     # Delete existing logic rules

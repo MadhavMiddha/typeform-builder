@@ -9,6 +9,7 @@ import { validateAnswer } from "@/lib/validation";
 import { formPlayerReducer, initialPlayerState } from "./formPlayerReducer";
 import { QuestionView } from "./QuestionView";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import type { CSSProperties } from "react";
 
 export function FormPlayer({ publicId }: { publicId: string }) {
   const searchParams = useSearchParams();
@@ -33,6 +34,13 @@ export function FormPlayer({ publicId }: { publicId: string }) {
   }, [formId, preview, publicId]);
 
   const current = state.screens[state.currentIndex];
+  useEffect(() => {
+    if (preview || !form || state.responseId || current?.kind !== "question") return;
+    void startPublicResponse(publicId)
+      .then((response) => dispatch({ type: "SET_RESPONSE_ID", responseId: response.id }))
+      .catch(() => setMessage("We couldn't start your response. Please try again."));
+  }, [current?.kind, form, preview, publicId, state.responseId]);
+
   const question = useMemo(() => current?.kind === "question" ? form?.questions.find((q) => q.id === current.questionId) : null, [current, form]);
   const goNext = useCallback(async () => {
     if (!form || !current) return;
@@ -54,8 +62,12 @@ export function FormPlayer({ publicId }: { publicId: string }) {
       }
       dispatch({ type: "SET_SUBMIT_STATUS", status: "submitting" });
       try {
-        const responseId = state.responseId ?? (await startPublicResponse(publicId)).id;
-        if (!state.responseId) dispatch({ type: "SET_RESPONSE_ID", responseId });
+        const responseId = state.responseId;
+        if (!responseId) {
+          setMessage("We couldn't start your response. Please try again.");
+          dispatch({ type: "SET_SUBMIT_STATUS", status: "error" });
+          return;
+        }
         await submitPublicResponse(publicId, { response_id: responseId, answers: Object.entries(state.answers).map(([question_id, value]) => ({ question_id: Number(question_id), value })) });
         dispatch({ type: "SET_SUBMIT_STATUS", status: "success" });
         dispatch({ type: "NEXT" });
@@ -141,9 +153,17 @@ export function FormPlayer({ publicId }: { publicId: string }) {
   if (status === "loading") return <PlayerMessage title="Loading form…" />;
   if (status === "unavailable") return <PlayerMessage title="This form is unavailable" detail={message || "It may be unpublished or no longer exists."} />;
   if (status === "error" || !form) return <PlayerMessage title="Something went wrong" detail={message} />;
+  const theme = form.theme ?? {};
+  const themeStyle = {
+    "--form-background": theme.background ?? "#ffffff",
+    "--form-question-text": theme.question_text ?? "#262627",
+    "--form-answer-accent": theme.answer_accent ?? "#6b5cff",
+    "--form-button": theme.button ?? "#262627",
+    "--form-font-family": theme.font_family ?? "Karla",
+  } as CSSProperties;
   if (current?.kind === "thank_you") return (
     <AnimatePresence mode="wait">
-      <motion.main key="thank-you" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="min-h-[100dvh] flex items-center justify-center px-6 text-center font-player">
+      <motion.main key="thank-you" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={themeStyle} className="min-h-[100dvh] flex items-center justify-center bg-[var(--form-background)] px-6 text-center text-[var(--form-question-text)] [font-family:var(--form-font-family)]">
         <div>
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border-2 border-brand text-3xl" aria-hidden="true">✓</div>
           <h1 className="text-3xl">{form.thank_you_title || "Thank you!"}</h1>
@@ -155,7 +175,8 @@ export function FormPlayer({ publicId }: { publicId: string }) {
   );
   return (
     <main
-      className="min-h-[100dvh] bg-white text-brand font-player flex flex-col"
+      style={{ ...themeStyle, backgroundImage: theme.background_image ? `url(${theme.background_image})` : undefined }}
+      className="min-h-[100dvh] bg-[var(--form-background)] text-[var(--form-question-text)] [font-family:var(--form-font-family)] flex flex-col"
       onKeyDownCapture={(event) => {
         const target = event.target as HTMLElement;
         if (event.key === "Enter" && target.tagName !== "TEXTAREA") {
@@ -165,7 +186,7 @@ export function FormPlayer({ publicId }: { publicId: string }) {
       }}
     >
       <div className="h-1 w-full bg-neutral-200" aria-label="Form progress">
-        <motion.div className="h-full bg-brand" animate={{ width: `${Math.max(0, Math.min(100, ((state.currentIndex + (current?.kind === "welcome" ? 0 : 1)) / Math.max(1, form.questions.length)) * 100))}%` }} transition={{ duration: 0.35 }} />
+        <motion.div className="h-full bg-[var(--form-answer-accent)]" animate={{ width: `${Math.max(0, Math.min(100, ((state.currentIndex + (current?.kind === "welcome" ? 0 : 1)) / Math.max(1, form.questions.length)) * 100))}%` }} transition={{ duration: 0.35 }} />
       </div>
       {preview && <div className="bg-amber-100 px-3 py-1 text-center text-xs text-amber-900">Preview mode</div>}
       <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col justify-center px-5 py-10">
@@ -179,7 +200,7 @@ export function FormPlayer({ publicId }: { publicId: string }) {
         </AnimatePresence>
         <div className="flex items-center justify-between max-w-2xl mx-auto w-full mt-6">
           <button type="button" onClick={() => dispatch({ type: "PREV" })} disabled={state.currentIndex === 0} className="px-4 py-2 text-sm disabled:opacity-30">Back</button>
-          <button type="button" onClick={() => void goNext()} disabled={state.submitStatus === "submitting"} className="rounded-lg bg-brand text-white px-6 py-2.5 font-medium disabled:opacity-50">
+          <button type="button" onClick={() => void goNext()} disabled={state.submitStatus === "submitting"} className="rounded-lg bg-[var(--form-button)] px-6 py-2.5 font-medium text-white disabled:opacity-50">
             {state.submitStatus === "submitting" ? "Submitting…" : current?.kind === "welcome" ? (form.welcome_button_label || "Start") : state.currentIndex === state.screens.length - 2 ? "Submit" : "Continue"}
           </button>
         </div>

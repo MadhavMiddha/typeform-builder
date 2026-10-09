@@ -6,8 +6,10 @@ import { Switch } from "@/components/ui/Switch";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { QuestionType, QuestionRead } from "@/lib/types";
 import { typeIcons } from "@/components/player/QuestionView";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useReplaceLogic } from "@/lib/api/questions";
+import { ComingSoon } from "@/components/ui/ComingSoon";
 
 export function SettingsPanel() {
   const { state, dispatch } = useBuilderStore();
@@ -79,7 +81,11 @@ const typeDefinitions: { type: QuestionType; label: string; badgeBg: string; bad
 ];
 
 function QuestionEditor({ question, formId }: { question: QuestionRead; formId: number }) {
-  const { dispatch } = useBuilderStore();
+  const { state, dispatch } = useBuilderStore();
+  const replaceLogic = useReplaceLogic(formId);
+  const laterQuestions = useBuilderStore().state.form?.questions
+    .filter((candidate) => candidate.position > question.position) ?? [];
+  const firstRule = question.logic_rules[0];
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [stepsDropdownOpen, setStepsDropdownOpen] = useState(false);
 
@@ -377,19 +383,99 @@ function QuestionEditor({ question, formId }: { question: QuestionRead; formId: 
       </div>
 
       {/* 3. Logic Card */}
-      <div className="bg-[#f5f5f5] rounded-[16px] p-4 flex items-center justify-between">
-        <span className="text-xs font-semibold text-neutral-600">Logic</span>
-        <Tooltip content="Coming soon">
-          <span>
-            <button
-              disabled
-              className="w-6 h-6 rounded-md flex items-center justify-center text-neutral-400 cursor-not-allowed hover:bg-neutral-200/50"
+      <div className="bg-[#f5f5f5] rounded-[16px] p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-neutral-600">Logic</span>
+          <button
+            type="button"
+            className="text-xs text-brand hover:underline disabled:text-neutral-400"
+            disabled={replaceLogic.isPending || laterQuestions.length === 0}
+            onClick={() => {
+              const destination = laterQuestions[0];
+              if (!destination) return;
+              const rule = { operator: "equals", value: "", jump_to_question_id: destination.id, jump_to_end: false };
+              replaceLogic.mutate({ qid: question.id, rules: [...question.logic_rules.map(({ operator, value, jump_to_question_id, jump_to_end }) => ({ operator, value, jump_to_question_id, jump_to_end })), rule] }, {
+                onSuccess: (updated) => dispatch({ type: "UPDATE_QUESTION", payload: { id: question.id, updates: updated } }),
+              });
+            }}
+          >Add rule</button>
+        </div>
+        {firstRule ? (
+          <div className="grid grid-cols-[1fr_1fr] gap-2">
+            <select
+              value={firstRule.operator}
+              onChange={(event) => replaceLogic.mutate({
+                qid: question.id,
+                rules: [{ operator: event.target.value, value: firstRule.value, jump_to_question_id: firstRule.jump_to_question_id, jump_to_end: firstRule.jump_to_end }],
+              })}
+              className="h-8 rounded border border-neutral-200 bg-white px-2 text-xs"
             >
-              <Plus size={16} />
-            </button>
-          </span>
-        </Tooltip>
+              {["equals", "not_equals", "contains", "greater_than", "less_than"].map((operator) => <option key={operator} value={operator}>{operator.replace("_", " ")}</option>)}
+            </select>
+            <input
+              value={firstRule.value ?? ""}
+              onChange={(event) => replaceLogic.mutate({ qid: question.id, rules: [{ operator: firstRule.operator, value: event.target.value, jump_to_question_id: firstRule.jump_to_question_id, jump_to_end: firstRule.jump_to_end }] })}
+              placeholder="value"
+              className="h-8 rounded border border-neutral-200 bg-white px-2 text-xs"
+            />
+            <span className="col-span-2 text-[11px] text-neutral-500">Otherwise go to the next question.</span>
+          </div>
+        ) : (
+          <p className="text-[11px] text-neutral-500">If answer matches a rule, jump to a later question or the end of the form.</p>
+        )}
       </div>
+      <ThemeEditor
+        theme={state.form?.theme ?? null}
+        onChange={(theme) => dispatch({ type: "UPDATE_FORM_FIELD", payload: { field: "theme", value: theme } })}
+      />
+      <ComingSoon disabled>Advanced logic, integrations and team sharing</ComingSoon>
     </div>
   );
+}
+
+function ThemeEditor({ theme, onChange }: { theme: import("@/lib/types").FormTheme | null; onChange: (theme: import("@/lib/types").FormTheme) => void }) {
+  const value = theme ?? { background: "#ffffff", question_text: "#262627", answer_accent: "#6b5cff", button: "#262627", font_family: "Karla" };
+  const presets: Record<string, import("@/lib/types").FormTheme> = {
+    "Classic": { background: "#ffffff", question_text: "#262627", answer_accent: "#6b5cff", button: "#262627", font_family: "Karla" },
+    "Midnight": { background: "#17171a", question_text: "#ffffff", answer_accent: "#9b87ff", button: "#ffffff", font_family: "Inter" },
+    "Meadow": { background: "#effaf5", question_text: "#164e3b", answer_accent: "#0e9f6e", button: "#166534", font_family: "Open Sans" },
+    "Sunset": { background: "#fff7ed", question_text: "#7c2d12", answer_accent: "#ea580c", button: "#9a3412", font_family: "Lato" },
+  };
+  const contrast = contrastRatio(value.question_text ?? "#262627", value.background ?? "#ffffff");
+  return (
+    <div className="bg-[#f5f5f5] rounded-[16px] p-4 flex flex-col gap-3">
+      <span className="text-xs font-semibold text-neutral-600">Theme</span>
+      <div className="flex flex-wrap gap-1.5">
+        {Object.entries(presets).map(([name, preset]) => (
+          <button key={name} type="button" onClick={() => onChange(preset)} className="rounded bg-white px-2 py-1 text-[11px] text-neutral-600 hover:bg-neutral-100">{name}</button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {(["background", "question_text", "answer_accent", "button"] as const).map((key) => (
+          <label key={key} className="text-[11px] text-neutral-500 flex items-center gap-2">
+            <input type="color" value={value[key] ?? "#ffffff"} onChange={(event) => onChange({ ...value, [key]: event.target.value })} />
+            {key.replace("_", " ")}
+          </label>
+        ))}
+      </div>
+      <select value={value.font_family ?? "Karla"} onChange={(event) => onChange({ ...value, font_family: event.target.value })} className="h-8 rounded border border-neutral-200 bg-white px-2 text-xs">
+        {["Karla", "Inter", "Roboto", "Open Sans", "Lato"].map((font) => <option key={font}>{font}</option>)}
+      </select>
+      <input value={value.background_image ?? ""} onChange={(event) => onChange({ ...value, background_image: event.target.value || undefined })} placeholder="Optional background image URL" className="h-8 rounded border border-neutral-200 bg-white px-2 text-xs" />
+      {contrast < 4.5 && <p role="alert" className="text-[11px] font-medium text-status-error">Text contrast is {contrast.toFixed(2)}:1. Choose colours with at least 4.5:1 contrast.</p>}
+    </div>
+  );
+}
+
+function contrastRatio(foreground: string, background: string) {
+  const luminance = (hex: string) => {
+    const clean = hex.replace("#", "");
+    if (!/^[0-9a-f]{6}$/i.test(clean)) return 0;
+    const channels = [0, 2, 4].map((index) => parseInt(clean.slice(index, index + 2), 16) / 255);
+    const linear = channels.map((channel) => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  };
+  const light = Math.max(luminance(foreground), luminance(background));
+  const dark = Math.min(luminance(foreground), luminance(background));
+  return (light + 0.05) / (dark + 0.05);
 }

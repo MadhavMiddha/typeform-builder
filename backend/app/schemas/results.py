@@ -66,6 +66,7 @@ class ResultsSummary(BaseModel):
     total_responses: int
     completed_responses: int
     partial_responses: int
+    abandoned_responses: int = 0
     completion_rate: float
     questions: list[QuestionSummary] = Field(default_factory=list)
     average_time_seconds: Optional[float] = None

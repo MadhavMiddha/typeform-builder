@@ -24,9 +24,12 @@ export interface ApiErrorResponse {
 export type FormStatus = "draft" | "published";
 
 export interface FormTheme {
-  primary?: string;
   background?: string;
-  [key: string]: string | undefined;
+  question_text?: string;
+  answer_accent?: string;
+  button?: string;
+  font_family?: string;
+  background_image?: string;
 }
 
 export interface FormListItem {
@@ -49,6 +52,7 @@ export interface PublicQuestionRead {
   required: boolean;
   settings: QuestionSettings | null;
   options: QuestionOptionRead[];
+  logic_rules: QuestionLogicRead[];
 }
 
 export interface PublicFormPayload {
@@ -237,6 +241,7 @@ export interface FormSummary {
   total_responses: number;
   completed_responses: number;
   partial_responses?: number;
+  abandoned_responses?: number;
   completion_rate: number;
   questions: QuestionSummary[];
   responses_per_day?: Array<{ date: string; count: number }>;

@@ -76,6 +76,18 @@ def _question_settings(q) -> dict | None:
     return None
 
 
+def _form_theme(form) -> dict | None:
+    if not form.theme:
+        return None
+    if isinstance(form.theme, dict):
+        return form.theme
+    try:
+        parsed = json.loads(form.theme)
+    except (TypeError, json.JSONDecodeError):
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
 def _form_to_public(form) -> PublicFormRead:
     questions = []
     for q in sorted(form.questions, key=lambda x: x.position):
@@ -89,6 +101,7 @@ def _form_to_public(form) -> PublicFormRead:
                 required=q.required,
                 settings=_question_settings(q),
                 options=sorted(q.options, key=lambda o: o.position),
+                logic_rules=sorted(q.logic_rules, key=lambda rule: rule.id),
             )
         )
     return PublicFormRead(
@@ -99,7 +112,7 @@ def _form_to_public(form) -> PublicFormRead:
         welcome_button_label=form.welcome_button_label,
         thank_you_title=form.thank_you_title,
         thank_you_message=form.thank_you_message,
-        theme=json.loads(form.theme) if isinstance(form.theme, str) else form.theme,
+        theme=_form_theme(form),
         questions=questions,
     )
 

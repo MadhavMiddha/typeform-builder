@@ -136,8 +136,18 @@ def get_response(db: Session, form_id: int, response_id: int, user_id: int) -> R
 
 def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
     _form(db, form_id, user_id)
-    total, completed = db.execute(
-        select(func.count(Response.id), func.sum(case((Response.status == "completed", 1), else_=0)))
+    abandoned_cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=30)
+    total, completed, abandoned = db.execute(
+        select(
+            func.count(Response.id),
+            func.sum(case((Response.status == "completed", 1), else_=0)),
+            func.sum(
+                case(
+                    (Response.status == "partial", case((Response.started_at < abandoned_cutoff, 1), else_=0)),
+                    else_=0,
+                )
+            ),
+        )
         .where(Response.form_id == form_id)
     ).one()
     total = int(total or 0)
@@ -245,6 +255,7 @@ def get_summary(db: Session, form_id: int, user_id: int) -> ResultsSummary:
     return ResultsSummary(
         total_responses=total, completed_responses=completed,
         partial_responses=total - completed,
+        abandoned_responses=int(abandoned or 0),
         completion_rate=round(completed / total * 100, 2) if total else 0.0,
         questions=result, average_time_seconds=round(float(average_time), 2) if average_time is not None else None,
         responses_per_day=responses_per_day,

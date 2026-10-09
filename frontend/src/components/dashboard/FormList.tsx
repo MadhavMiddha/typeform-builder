@@ -5,14 +5,15 @@ import { relativeTime, publicFormUrl } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/DropdownMenu";
 import { MoreHorizontal, Edit2, Copy, Eye, EyeOff, Link as LinkIcon, Trash2, Blocks } from "lucide-react";
 import { useDuplicateForm, usePublishForm, useUnpublishForm, useDeleteForm, useRenameForm } from "@/lib/api/forms";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { downloadResponsesCsv } from "@/lib/api/results";
 
-export function FormList({ forms, view }: { forms: FormListItem[], view: "list" | "grid" }) {
+export const FormList = memo(function FormList({ forms, view }: { forms: FormListItem[], view: "list" | "grid" }) {
   if (view === "grid") {
     return (
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4 sm:gap-6">
@@ -36,9 +37,9 @@ export function FormList({ forms, view }: { forms: FormListItem[], view: "list" 
       </div>
     </div>
   );
-}
+});
 
-function FormCard({ form, view }: { form: FormListItem, view: "list" | "grid" }) {
+const FormCard = memo(function FormCard({ form, view }: { form: FormListItem, view: "list" | "grid" }) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -55,6 +56,12 @@ function FormCard({ form, view }: { form: FormListItem, view: "list" | "grid" })
   const handleCopyLink = () => {
     navigator.clipboard.writeText(publicFormUrl(form.public_id));
     toast.success("Link copied");
+  };
+
+  const handleExport = () => {
+    void downloadResponsesCsv(form.id, `${form.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-responses.csv`)
+      .then(() => toast.success("Responses exported"))
+      .catch(() => toast.error("Couldn't export responses. Try again."));
   };
 
   const handleRename = (e: React.FormEvent) => {
@@ -94,6 +101,9 @@ function FormCard({ form, view }: { form: FormListItem, view: "list" | "grid" })
             <Eye size={16} /> Publish
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem onSelect={handleExport}>
+          <Blocks size={16} /> Export CSV
+        </DropdownMenuItem>
         
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="danger" onSelect={() => setDeleteOpen(true)}>
@@ -172,7 +182,7 @@ function FormCard({ form, view }: { form: FormListItem, view: "list" | "grid" })
       <RenameDialog open={renameOpen} onOpenChange={setRenameOpen} newName={newName} setNewName={setNewName} onConfirm={handleRename} loading={renameForm.isPending} />
     </>
   );
-}
+});
 
 function DeleteDialog({ open, onOpenChange, formTitle, onConfirm, loading }: { open: boolean, onOpenChange: (open: boolean) => void, formTitle: string, onConfirm: () => void, loading: boolean }) {
   return (

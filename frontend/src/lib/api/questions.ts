@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, endpoints, ApiError } from "@/lib/api";
-import type { QuestionCreate, QuestionRead, QuestionUpdate, QuestionOptionCreate } from "@/lib/types";
+import type { QuestionCreate, QuestionRead, QuestionUpdate, QuestionOptionCreate, QuestionLogicCreate } from "@/lib/types";
 import { toast } from "sonner";
 import { formKeys } from "./forms";
 
@@ -81,5 +81,14 @@ export function useReplaceOptions(formId: number) {
     onError: (err) => {
       toast.error(getErrorMessage(err, "Failed to update options"));
     },
+  });
+}
+
+export function useReplaceLogic(formId: number) {
+  const qc = useQueryClient();
+  return useMutation<QuestionRead, Error, { qid: number; rules: QuestionLogicCreate[] }>({
+    mutationFn: ({ qid, rules }) => api.put<QuestionRead>(endpoints.questions.logic(qid), { rules }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: formKeys.detail(formId) }),
+    onError: (err) => toast.error(getErrorMessage(err, "Failed to update logic")),
   });
 }

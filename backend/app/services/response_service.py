@@ -33,6 +33,7 @@ def _load_form_by_public_id(
         .where(Form.public_id == public_id)
         .options(
             selectinload(Form.questions).selectinload(Question.options),
+            selectinload(Form.questions).selectinload(Question.logic_rules),
         )
     )
     if published_only:
@@ -56,6 +57,7 @@ def get_form_preview(db: Session, form_id: int, user_id: int) -> Form:
             .where(Form.id == form_id, Form.user_id == user_id)
             .options(
                 selectinload(Form.questions).selectinload(Question.options),
+                selectinload(Form.questions).selectinload(Question.logic_rules),
             )
         )
         .scalar_one_or_none()
@@ -106,6 +108,45 @@ def _normalise_settings(settings: Any) -> Dict[str, Any]:
     return {}
 
 
+def _rule_matches(rule: Any, value: Any) -> bool:
+    actual = str(value if value is not None else "").lower()
+    expected = str(rule.value if rule.value is not None else "").lower()
+    if rule.operator == "equals":
+        return expected in [str(item).lower() for item in value] if isinstance(value, list) else actual == expected
+    if rule.operator == "not_equals":
+        return expected not in [str(item).lower() for item in value] if isinstance(value, list) else actual != expected
+    if rule.operator == "contains":
+        return expected in [str(item).lower() for item in value] if isinstance(value, list) else expected in actual
+    try:
+        left, right = float(value), float(rule.value)
+    except (TypeError, ValueError):
+        return False
+    return left > right if rule.operator == "greater_than" else left < right
+
+
+def _visited_question_ids(form: Form, raw_answers: Dict[int, Any]) -> Set[int]:
+    ordered = sorted(form.questions, key=lambda question: question.position)
+    by_id = {question.id: question for question in ordered}
+    visited: Set[int] = set()
+    index = 0
+    while 0 <= index < len(ordered):
+        question = ordered[index]
+        if question.id in visited:
+            break
+        visited.add(question.id)
+        matching = next(
+            (rule for rule in question.logic_rules if _rule_matches(rule, raw_answers.get(question.id))),
+            None,
+        )
+        if matching and matching.jump_to_end:
+            break
+        if matching and matching.jump_to_question_id in by_id:
+            index = next(i for i, item in enumerate(ordered) if item.id == matching.jump_to_question_id)
+        else:
+            index += 1
+    return visited
+
+
 def submit_response(
     db: Session,
     public_id: str,
@@ -136,6 +177,8 @@ def submit_response(
     fields: Dict[str, str] = {}
     seen_question_ids: Set[int] = set()
     validated: Dict[int, NormalisedAnswer] = {}
+    raw_answers = {item.question_id: item.value for item in answers}
+    visited_ids = _visited_question_ids(form, raw_answers)
 
     for item in answers:
         qid = item.question_id
@@ -146,6 +189,8 @@ def submit_response(
 
         if qid not in form_question_ids:
             fields[str(qid)] = "Unknown question for this form."
+            continue
+        if qid not in visited_ids:
             continue
 
         question = questions_by_id[qid]
@@ -165,7 +210,7 @@ def submit_response(
             fields[str(qid)] = msg
 
     for question in form.questions:
-        if not question.required:
+        if not question.required or question.id not in visited_ids:
             continue
         if question.id not in validated:
             fields[str(question.id)] = f"Please fill in {question.title}."

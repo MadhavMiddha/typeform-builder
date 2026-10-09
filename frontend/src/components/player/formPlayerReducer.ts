@@ -12,6 +12,7 @@ export type SubmitStatus = "idle" | "submitting" | "success" | "error";
 export interface FormPlayerState {
   screens: PlayerScreen[];
   currentIndex: number;
+  history: number[];
   direction: 1 | -1;
   answers: Record<number, AnswerValue>;
   errors: Record<number, string>;
@@ -34,23 +35,45 @@ export type FormPlayerAction =
 export function buildScreens(form: PublicFormPayload): PlayerScreen[] {
   const screens: PlayerScreen[] = [];
   if (form.welcome_title) screens.push({ kind: "welcome" });
-  for (const q of form.questions) {
+  for (const q of form.questions.sort((a, b) => a.position - b.position)) {
     screens.push({ kind: "question", questionId: q.id });
   }
   screens.push({ kind: "thank_you" });
   return screens;
 }
 
-/** Phase 6 jump logic hooks in here. */
+function matchesRule(question: PublicFormPayload["questions"][number], rule: NonNullable<PublicFormPayload["questions"][number]["logic_rules"]>[number], answer: AnswerValue): boolean {
+  const value = String(answer ?? "").toLowerCase();
+  const expected = String(rule.value ?? "").toLowerCase();
+  if (rule.operator === "equals") return Array.isArray(answer) ? answer.map(String).includes(expected) : value === expected;
+  if (rule.operator === "not_equals") return Array.isArray(answer) ? !answer.map(String).includes(expected) : value !== expected;
+  if (rule.operator === "contains") return Array.isArray(answer) ? answer.map(String).includes(expected) : value.includes(expected);
+  const numeric = Number(answer);
+  const target = Number(rule.value);
+  return rule.operator === "greater_than" ? numeric > target : numeric < target;
+}
+
 export function resolveNextIndex(
   state: FormPlayerState,
-  _form: PublicFormPayload
+  form: PublicFormPayload
 ): number {
+  const current = state.screens[state.currentIndex];
+  if (current?.kind === "question") {
+    const question = questionById(form, current.questionId);
+    const rule = question?.logic_rules.find((candidate) =>
+      matchesRule(question, candidate, state.answers[question.id]),
+    );
+    if (rule?.jump_to_end) return state.screens.length - 1;
+    if (rule?.jump_to_question_id) {
+      const target = state.screens.findIndex((screen) => screen.kind === "question" && screen.questionId === rule.jump_to_question_id);
+      if (target >= 0) return target;
+    }
+  }
   return Math.min(state.currentIndex + 1, state.screens.length - 1);
 }
 
 export function resolvePrevIndex(state: FormPlayerState): number {
-  return Math.max(state.currentIndex - 1, 0);
+  return state.history.length > 0 ? state.history[state.history.length - 1] : 0;
 }
 
 function questionById(form: PublicFormPayload, id: number) {
@@ -67,6 +90,7 @@ export function formPlayerReducer(
       return {
         screens: buildScreens(action.form),
         currentIndex: 0,
+        history: [],
         direction: 1,
         answers: {},
         errors: {},
@@ -106,7 +130,7 @@ export function formPlayerReducer(
         (s) => s.kind === "question" && s.questionId === action.questionId
       );
       if (idx < 0) return state;
-      return { ...state, currentIndex: idx, direction: 1 };
+      return { ...state, currentIndex: idx, history: [...state.history, state.currentIndex], direction: 1 };
     }
     case "NEXT": {
       const screen = state.screens[state.currentIndex];
@@ -124,12 +148,12 @@ export function formPlayerReducer(
       }
       const next = form ? resolveNextIndex(state, form) : state.currentIndex + 1;
       if (next === state.currentIndex) return state;
-      return { ...state, currentIndex: next, direction: 1 };
+      return { ...state, currentIndex: next, history: [...state.history, state.currentIndex], direction: 1 };
     }
     case "PREV": {
       const prev = resolvePrevIndex(state);
       if (prev === state.currentIndex) return state;
-      return { ...state, currentIndex: prev, direction: -1 };
+      return { ...state, currentIndex: prev, history: state.history.slice(0, -1), direction: -1 };
     }
     default:
       return state;
@@ -140,6 +164,7 @@ export function initialPlayerState(): FormPlayerState {
   return {
     screens: [],
     currentIndex: 0,
+    history: [],
     direction: 1,
     answers: {},
     errors: {},

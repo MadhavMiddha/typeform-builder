@@ -15,8 +15,8 @@ const form: PublicFormPayload = {
   thank_you_message: "Done",
   theme: null,
   questions: [
-    { id: 1, position: 1, type: "short_text", title: "Name", description: null, required: true, settings: null, options: [] },
-    { id: 2, position: 2, type: "email", title: "Email", description: null, required: false, settings: null, options: [] },
+    { id: 1, position: 1, type: "short_text", title: "Name", description: null, required: true, settings: null, options: [], logic_rules: [{ id: 1, question_id: 1, operator: "equals", value: "skip", jump_to_question_id: 2, jump_to_end: false }] },
+    { id: 2, position: 2, type: "email", title: "Email", description: null, required: false, settings: null, options: [], logic_rules: [] },
   ],
 };
 
@@ -67,5 +67,15 @@ describe("formPlayerReducer", () => {
     const jumped = formPlayerReducer(state, { type: "JUMP_TO_QUESTION", questionId: 2 }, form);
     expect(jumped.currentIndex).toBe(2);
     expect(jumped.direction).toBe(1);
+  });
+
+  it("follows a matching jump and returns through visited history", () => {
+    const first = initialized();
+    const question = formPlayerReducer(first, { type: "NEXT" }, form);
+    const answered = formPlayerReducer(question, { type: "SET_ANSWER", questionId: 1, value: "skip" }, form);
+    const jumped = formPlayerReducer(answered, { type: "NEXT" }, form);
+    expect(jumped.currentIndex).toBe(2);
+    const back = formPlayerReducer(jumped, { type: "PREV" }, form);
+    expect(back.currentIndex).toBe(1);
   });
 });

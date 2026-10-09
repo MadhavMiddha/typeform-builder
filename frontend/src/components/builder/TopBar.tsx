@@ -191,7 +191,7 @@ export function TopBar({ onRetry, activeTab = "content" }: { onRetry?: () => voi
                   : "bg-neutral-200 text-neutral-700 hover:bg-neutral-300"
               )}
             >
-              {form.status === "published" ? "Published" : "Draft"}
+              {form.status === "published" ? "Published" : "Publish"}
               <ChevronDown size={13} className="opacity-70" />
             </Button>
           </DropdownMenuTrigger>
