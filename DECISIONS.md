@@ -37,3 +37,4 @@
 | 2026-10-09 | Seed only when the database contains no forms | Seed on every startup or require a manual deployment command | Empty hosted disks recover the demo automatically, while existing user data is never mixed with demo rows. |
 | 2026-10-09 | Keep the frontend same-origin fallback and configure API/app URLs through public environment variables | Hard-coded local or deployed URLs | Share links and API calls work in local and hosted environments without changing source code. |
 | 2026-10-09 | Omit X-Frame-Options only from public form routes | Allow all app pages to be framed | The embed snippet works while creator pages remain protected against clickjacking. |
+| 2026-10-09 | Keep schema and API exports generated from the clean seed database and live route decorators | Hand-written counts or speculative endpoint documentation | Submission claims remain traceable to the shipped schema, routes, slugs, and response counts. |

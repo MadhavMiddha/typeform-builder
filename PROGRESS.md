@@ -260,3 +260,12 @@
 3. Tracked absolute Windows/macOS/Linux user-path scan: clean.
 4. `.env` files, databases, virtual environments, caches, and build outputs are not tracked.
 5. Test reports contain URLs and bundled library text only; no secrets were found.
+
+## Phase 7 – Part 3 documentation and submission
+
+| Item | File(s) | Status | Evidence |
+|---|---|---|---|
+| Full README | README.md | DONE | Includes overview, assignment mapping, architecture Mermaid, schema Mermaid/table, API table, setup for Windows and macOS/Linux, deployment caveat, testing results, limitations, and original-work statement. |
+| Schema and API documentation | docs/SCHEMA.sql, docs/API.md | DONE | Schema exported from the real SQLite database; API examples and route table match the route decorators. |
+| Submission pack | docs/SUBMISSION.md | DONE | Clean seed query confirmed slugs feedback001/eventReg01/jobapply1 and counts 25/12/0 before writing the paste-ready text. |
+| Documentation checks | README.md, docs/* | DONE | Relative links resolve, Mermaid diagrams use valid flowchart/erDiagram syntax, and `git diff --check` is clean. |
