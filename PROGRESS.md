@@ -6,9 +6,9 @@
 - [x] Phase 3: Form Builder (Canvas, Settings, Drag & Drop, Autosave)
 - [x] Phase 4: Public Respondent Flow + Submission API
 - [x] Phase 5: Creator Dashboard & Form Lifecycle Management
-- [ ] Phase 6: Response Handling, Server Validation & Seed Data
-- [ ] Phase 7: Respondent Experience (/f/[publicId], Keyboard Nav, Animations)
-- [ ] Phase 8: Results View (Summary, Responses Table, Drawer, CSV Export) & Polish
+- [x] Phase 6: Response Handling, Server Validation & Seed Data
+- [x] Phase 7: Respondent Experience (/f/[publicId], Keyboard Nav, Animations)
+- [x] Phase 8: Results View (Summary, Responses Table, Drawer, CSV Export) & Polish
 
 ## Deviations from spec
 - Edits to a published form go live immediately through autosave; real Typeform requires clicking Publish edits. Simplified on purpose.
@@ -269,3 +269,41 @@
 | Schema and API documentation | docs/SCHEMA.sql, docs/API.md | DONE | Schema exported from the real SQLite database; API examples and route table match the route decorators. |
 | Submission pack | docs/SUBMISSION.md | DONE | Clean seed query confirmed slugs feedback001/eventReg01/jobapply1 and counts 25/12/0 before writing the paste-ready text. |
 | Documentation checks | README.md, docs/* | DONE | Relative links resolve, Mermaid diagrams use valid flowchart/erDiagram syntax, and `git diff --check` is clean. |
+
+## Phase 7 – Part 4 final traceability
+
+| Assignment requirement | Files/evidence | Status and honest note |
+|---|---|---|
+| Core 1 – create/manage forms | frontend/src/app/page.tsx, components/dashboard, backend/app/routers/forms.py | DONE |
+| Core 2 – builder authoring | frontend/src/app/forms/[id]/edit, components/builder, hooks/useAutosave.ts | DONE |
+| Core 3 – publish/share | FormHeader.tsx, ShareDialog.tsx, forms.py, public.py | DONE |
+| Core 4 – public respondent flow | frontend/src/app/f/[publicId], components/player, public.py | DONE |
+| Core 5 – results/export | components/results, routers/results.py, results_service.py, docs/API.md | DONE |
+| Typeform dashboard, builder panes, settings, drag/drop, autosave | frontend/src/components/{dashboard,builder}, hooks | DONE |
+| Typeform welcome, keyboard navigation, animation, validation, mobile, thank-you | frontend/src/components/player, formPlayerReducer.ts | DONE |
+| Typeform summary, responses table, drawer, filters, charts, CSV/XLSX | frontend/src/components/results, backend/app/services/results_service.py | DONE |
+| Workflow and Connect tabs | FormHeader.tsx, ComingSoon.tsx | PLACEHOLDER |
+| Advanced logic UI | SettingsPanel.tsx, ComingSoon.tsx | PLACEHOLDER; server logic bonus is implemented |
+| Integrations/webhooks and team collaboration | ComingSoon.tsx | PLACEHOLDER |
+| Payments and file-upload question types | ComingSoon.tsx, answer validators | PLACEHOLDER |
+| Theme extras, spam, tags, Smart Insights, email embed, link preview customisation | ComingSoon.tsx, share dialog | PLACEHOLDER |
+| Bonus logic jumps | question_service.py, response_service.py, formPlayerReducer.ts | DONE |
+| Bonus partial/abandoned tracking | response_service.py, results_service.py | DONE |
+| Bonus custom themes | SettingsPanel.tsx, FormPlayer.tsx | DONE |
+| Bonus dashboard/export enhancements | FormList.tsx, results exports | DONE |
+| Environment/deployment deliverables | backend/render.yaml, backend/Dockerfile, .env.example files | DONE |
+| Smoke tests and startup recovery | scripts/smoke_test.*, main.py, scripts/seed.py | DONE |
+| Schema/API/submission documentation | docs/*, README.md | DONE |
+| Quality/evaluation: type safety, modularity, tests, accessibility, error states | backend tests, Vitest, tsc, lint, build, state audit | DONE; no real auth and in-memory limiter remain documented limitations |
+| Original-work and visual-study disclosure | README.md | DONE |
+
+### Final handoff evidence
+
+| Gate | Result |
+|---|---|
+| Backend | 159 passed, 86% total coverage |
+| Frontend unit tests | 5 passed |
+| Frontend static checks | TypeScript, ESLint, and production build passed |
+| Deployment smoke | PowerShell script passed all six checks against local Uvicorn |
+| Bash smoke | Script added and reviewed; not executable because Bash is not installed in this Windows environment |
+| Worktree | Only this final progress update remains before the final commit |
