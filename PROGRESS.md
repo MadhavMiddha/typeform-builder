@@ -243,3 +243,20 @@
 | Frontend URL configuration | frontend/src/lib/*.ts, frontend/src/components/builder/ShareDialog.tsx | DONE | URLs use environment configuration or browser origin; source grep has no hard-coded localhost URLs. |
 | Smoke scripts | scripts/smoke_test.sh, scripts/smoke_test.ps1 | DONE | PowerShell smoke test passed health, list, public fetch, valid/invalid submit, and summary. |
 | Part 1 quality checks | backend tests; frontend typecheck, lint, build | DONE | 159 backend tests passed; frontend typecheck, lint, and production build passed. |
+
+## Phase 7 – Part 2 hardening
+
+| Item | File(s) | Status | Evidence |
+|---|---|---|---|
+| Secret and history scan | repository and git history | DONE | No credential-pattern or absolute-user-path matches in tracked HEAD or commit history; generated reports contain only test output. |
+| CORS, body limits, ORM usage, framing, and errors | backend/app/config.py, backend/app/routers/public.py, backend/app/main.py, frontend/next.config.ts | DONE | Wildcard CORS rejected, public bodies capped at 512 KiB/200 answers, raw SQL limited to the documented SQLite migration, no dangerouslySetInnerHTML, clean 404 envelope, generic production 500 envelope. |
+| Backend coverage gate | backend/requirements.txt | DONE | 159 tests passed; coverage measured with pytest-cov: 86% total. |
+| Frontend quality gate | frontend/tests/formPlayerReducer.test.ts | DONE | 5 Vitest tests passed; TypeScript, lint, and production build passed. |
+
+### Secret scan report (five lines)
+
+1. Tracked working tree credential-pattern scan: clean.
+2. Git history credential-pattern scan: clean.
+3. Tracked absolute Windows/macOS/Linux user-path scan: clean.
+4. `.env` files, databases, virtual environments, caches, and build outputs are not tracked.
+5. Test reports contain URLs and bundled library text only; no secrets were found.

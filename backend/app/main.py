@@ -36,6 +36,8 @@ async def lifespan(app: FastAPI):
     if engine.dialect.name == "sqlite":
         columns = {column["name"] for column in inspect(engine).get_columns("responses")}
         if "token" not in columns:
+            # This is the one-time compatibility migration for databases created before
+            # continuation tokens existed; application queries remain SQLAlchemy-only.
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE responses ADD COLUMN token VARCHAR(64)"))
                 connection.execute(
